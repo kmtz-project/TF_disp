@@ -22,17 +22,20 @@ num_of_epochs = 10
 # fix random seed for reproducibility
 numpy.random.seed(7)
 
-# load Cones dataset
+# load dataset
 left1, right1, outputs1 = data.get_batch("../samples/" + image_name + "/", patch_size, neg_low, neg_high, scale)
-image_name = "teddy"
 left2, right2, outputs2 = data.get_batch("../samples/" + image_name + "/", patch_size, neg_low, neg_high, scale)
+
 left = numpy.concatenate((left1,left2))
 right = numpy.concatenate((right1,right2))
 outputs = numpy.concatenate((outputs1,outputs2))
+
 print(left.shape)
+
 left = left[0:training_size]
 right = right[0:training_size]
 outputs = outputs[0:training_size]
+
 # create model
 left_input = Input(shape=(patch_size, patch_size, 1, ))
 left_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="lc1") (left_input)

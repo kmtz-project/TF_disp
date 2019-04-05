@@ -5,6 +5,9 @@ from keras.layers import Dense, Conv2D, Dot, Flatten, Input, Concatenate
 from PIL import Image, ImageDraw
 import time
 import matplotlib.pyplot as plt
+import cv2
+from capi._vision import lib as vision
+from cffi import FFI 
 
 
 '''
@@ -205,6 +208,64 @@ def disp_map_from_predict(predictions, left_conv, patch_size, max_disp, match_th
 '''
 !!! All the below functions save their results in /work directory. !!!
 '''
+
+def sgbm(predictions, max_disp, P1, P2):
+    """Perform SGBM"""
+    
+    print("SGBM computation")
+
+    i, j = 0, 0
+    n, m = 2,3
+    N = 60
+
+    a = numpy.zeros((n, m, N), dtype=numpy.float32)
+
+    ffi = FFI()
+    float_mas = ffi.new("float *")
+    float_mas = ffi.cast("float *", a.ctypes.data)
+
+    a[i, j] = range(N)
+    a[i+1, j+1] = [123 for x in range(N)]
+
+    vision.sgbm(float_mas, i, j+1)
+
+    # f = numpy.vectorize(f_max)
+
+    # height = predictions.shape[0]
+    # width = predictions.shape[1] + max_disp
+    # disp_pix = numpy.zeros((height, width))
+    # timestamp = time.time()
+    # #sorted_predictions = numpy.sort(predictions)
+    # sgbm_cost = numpy.zeros((height, width, max_disp))
+    # for i in range(height):
+    #     for j in range(max_disp, width):
+    #         for d in range(max_disp-1):
+    #             cost_right = numpy.array([sgbm_cost[i, j, d] - max(predictions[i, j - max_disp + r]) for r in range(width-j)])
+    #                 #cost = [predictions[i, j - max_disp + r, d],
+    #                 #        predictions[i, j - max_disp + r, d-1] - P1,
+    #                 #        predictions[i, j - max_disp + r, d+1] - P1,
+    #                 #        max(predictions[i, j - max_disp + r]) - P2]
+    #                 #cost_right += min(cost)
+                
+    #             #cost_left  = 
+    #             #cost_up    = 
+    #             #cost_down  = 
+
+    #             #sgbm_cost[i, j, d] = (cost_right + cost_left + cost_up + cost_down)/4
+    #             sgbm_cost[i, j, d] = cost_right.sum()
+
+    #         #disp_pix[i,j] = numpy.argmax(predictions[i,j - max_disp])
+    #         disp_pix[i,j] = numpy.argmax(sgbm_cost[i,j])
+    #         progress = i*j/(width*height) 
+    #         print("\rtime ", "%.2f" % (time.time()-timestamp), " progress ", "i = %.2f, j = %.2f" % (i, j), end = "\r")
+
+
+    # disp_pix[:, max_disp:] = (255*(max_disp - disp_pix[:, max_disp:]))/max_disp
+    # print("\ntotal time ", "%.2f" % (time.time()-timestamp))
+    
+    # return Image.fromarray(disp_pix.astype('uint8'), mode = 'L')
+
+
 
 '''
 This function takes a ground truth disparity image and a real disparity image and can be used

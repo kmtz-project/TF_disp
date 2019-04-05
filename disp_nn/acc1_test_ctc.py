@@ -17,7 +17,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0'
 conv_feature_maps = 112
 dense_size = 384
 patch_size = 11
-image_name = "pattern2"
+image_name = "pattern1"
 cpu_only = True
 
 # fix random seed for reproducibility

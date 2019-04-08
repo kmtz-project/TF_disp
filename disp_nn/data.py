@@ -6,8 +6,7 @@ from PIL import Image, ImageDraw
 import time
 import matplotlib.pyplot as plt
 import cv2
-from capi._vision import lib as vision
-from cffi import FFI 
+from capi import sgbm as vSGBM
 
 
 '''
@@ -214,27 +213,16 @@ def sgbm(predictions, max_disp, P1, P2):
     
     print("SGBM computation")
 
-    i, j = 0, 0
-    n, m = 2,3
-    N = 60
+    disp_pix = vSGBM.compute(predictions)
 
-    a = numpy.zeros((n, m, N), dtype=numpy.float32)
-
-    ffi = FFI()
-    float_mas = ffi.new("float *")
-    float_mas = ffi.cast("float *", a.ctypes.data)
-
-    a[i, j] = range(N)
-    a[i+1, j+1] = [123 for x in range(N)]
-
-    vision.sgbm(float_mas, i, j+1)
+    #vision.sgbm(float_mas, array_shape)
 
     # f = numpy.vectorize(f_max)
 
     # height = predictions.shape[0]
     # width = predictions.shape[1] + max_disp
     # disp_pix = numpy.zeros((height, width))
-    # timestamp = time.time()
+    timestamp = time.time()
     # #sorted_predictions = numpy.sort(predictions)
     # sgbm_cost = numpy.zeros((height, width, max_disp))
     # for i in range(height):
@@ -260,10 +248,10 @@ def sgbm(predictions, max_disp, P1, P2):
     #         print("\rtime ", "%.2f" % (time.time()-timestamp), " progress ", "i = %.2f, j = %.2f" % (i, j), end = "\r")
 
 
-    # disp_pix[:, max_disp:] = (255*(max_disp - disp_pix[:, max_disp:]))/max_disp
-    # print("\ntotal time ", "%.2f" % (time.time()-timestamp))
+    disp_pix[:, max_disp:] = (255*(max_disp - disp_pix[:, max_disp:]))/max_disp
+    print("\ntotal time ", "%.2f" % (time.time()-timestamp))
     
-    # return Image.fromarray(disp_pix.astype('uint8'), mode = 'L')
+    return Image.fromarray(disp_pix.astype('uint8'), mode = 'L')
 
 
 

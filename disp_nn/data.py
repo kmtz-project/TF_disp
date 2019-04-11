@@ -213,43 +213,22 @@ def sgbm(predictions, max_disp, P1, P2):
     
     print("SGBM computation")
 
-    disp_pix = vSGBM.compute(predictions)
+    P1 = 10
+    P2 = 0.5
 
-    #vision.sgbm(float_mas, array_shape)
+    cross_size = 40
 
-    # f = numpy.vectorize(f_max)
+    predictions = 1 - predictions # convert predictions to matching cost
 
-    # height = predictions.shape[0]
-    # width = predictions.shape[1] + max_disp
-    # disp_pix = numpy.zeros((height, width))
     timestamp = time.time()
-    # #sorted_predictions = numpy.sort(predictions)
-    # sgbm_cost = numpy.zeros((height, width, max_disp))
-    # for i in range(height):
-    #     for j in range(max_disp, width):
-    #         for d in range(max_disp-1):
-    #             cost_right = numpy.array([sgbm_cost[i, j, d] - max(predictions[i, j - max_disp + r]) for r in range(width-j)])
-    #                 #cost = [predictions[i, j - max_disp + r, d],
-    #                 #        predictions[i, j - max_disp + r, d-1] - P1,
-    #                 #        predictions[i, j - max_disp + r, d+1] - P1,
-    #                 #        max(predictions[i, j - max_disp + r]) - P2]
-    #                 #cost_right += min(cost)
-                
-    #             #cost_left  = 
-    #             #cost_up    = 
-    #             #cost_down  = 
-
-    #             #sgbm_cost[i, j, d] = (cost_right + cost_left + cost_up + cost_down)/4
-    #             sgbm_cost[i, j, d] = cost_right.sum()
-
-    #         #disp_pix[i,j] = numpy.argmax(predictions[i,j - max_disp])
-    #         disp_pix[i,j] = numpy.argmax(sgbm_cost[i,j])
-    #         progress = i*j/(width*height) 
-    #         print("\rtime ", "%.2f" % (time.time()-timestamp), " progress ", "i = %.2f, j = %.2f" % (i, j), end = "\r")
-
+    disp_pix = vSGBM.compute(predictions, cross_size, P1)
 
     disp_pix[:, max_disp:] = (255*(max_disp - disp_pix[:, max_disp:]))/max_disp
     print("\ntotal time ", "%.2f" % (time.time()-timestamp))
+
+    #disp_pix = cv2.blur(disp_pix, (5, 5))
+    img = disp_pix.astype('uint8')
+    disp_pix = cv2.bilateralFilter(img, 10, 7, 7)
     
     return Image.fromarray(disp_pix.astype('uint8'), mode = 'L')
 

@@ -28,20 +28,14 @@ np::ndarray compute(np::ndarray data, int cross_size, float P)
 	int shape[3] = { n, m - max_disp, max_disp };
 	cv::Mat predict   = cv::Mat(3, shape, CV_32F, data.get_data());
 	cv::Mat sgbm_cost = cv::Mat(3, shape, CV_32F);
-	//cv::Mat disp_img = cv::Mat(n, m, CV_8U);
 
 	float * row = nullptr;
 	float * cost_row = nullptr;
-
-	//std::vector<float> cost_left(max_disp, 0);
-	//std::vector<float> cost_up(max_disp, 0);
-	//std::vector<float> cost_down(max_disp, 0);
 
 	for (int i = 0; i < n; i++) 
 	{
 		for (int j = max_disp; j < m; j++)
 		{
-			//float element = extract<float>(data[0][0][i]);
 
 			row      = predict.ptr<float>(i, j - max_disp);
 			cost_row = sgbm_cost.ptr<float>(i, j - max_disp);
@@ -100,17 +94,14 @@ np::ndarray compute(np::ndarray data, int cross_size, float P)
 						row_v_next
 					};*/
 
-					cost_h  += row_h[d];//*std::min_element(h_array, h_array + 3);
-					cost_v  += row_v[d];//*std::min_element(v_array, v_array + 3);
+					cost_h  += row_h[d];
+					cost_v  += row_v[d];
 					cost_rd += row_rd[d];
 					cost_ld += row_ld[d];
 				}
 
-				//printf("cost[%d][%d][%d] = %f\n", i, h_ptr, d, cost_h);
 				cost_row[d] = (cost_h + cost_v + (cost_rd + cost_ld)/3)/4;
 			}
-
-			//row = sgbm_cost.ptr<float>(i, j - max_disp);
 
 			std::vector<float> disp_row(cost_row, cost_row + max_disp);
 			int i_min = std::min_element(disp_row.begin(), disp_row.end()) - disp_row.begin();

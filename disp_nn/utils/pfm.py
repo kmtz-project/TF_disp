@@ -13,8 +13,6 @@ def readPfm(file):
             else:
                 sys.exit(1)
 
-            print("channels = ", channels)
-
             # Line 2: width height
             line = f.readline().decode('latin-1')
             width, height = re.findall('\d+', line)

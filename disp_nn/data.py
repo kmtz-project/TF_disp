@@ -208,31 +208,27 @@ def disp_map_from_predict(predictions, left_conv, patch_size, max_disp, match_th
 !!! All the below functions save their results in /work directory. !!!
 '''
 
-def sgbm(predictions, max_disp, P1, P2):
+def sgbm(predictions, max_disp, cross_size):
     """Perform SGBM"""
     
     print("SGBM computation")
 
-    P1 = 10
-    P2 = 0.5
-
-    cross_size = 40
-
     predictions = 1 - predictions # convert predictions to matching cost
 
     timestamp = time.time()
-    disp_pix = vSGBM.compute(predictions, cross_size, P1)
+    disp_pix = vSGBM.compute(predictions, cross_size, 0)
 
-    disp_pix[:, max_disp:] = (255*(max_disp - disp_pix[:, max_disp:]))/max_disp
+    
+    disp_pix[:, max_disp:] = max_disp - disp_pix[:, max_disp:]
+    #disp_pix[:, max_disp:] = (255*disp_pix[:, max_disp:])/max_disp
     print("\ntotal time ", "%.2f" % (time.time()-timestamp))
 
-    #disp_pix = cv2.blur(disp_pix, (5, 5))
     img = disp_pix.astype('uint8')
-    disp_pix = cv2.bilateralFilter(img, 10, 7, 7)
+    disp_pix = cv2.bilateralFilter(img, 5, 5, 5)
+
+    return disp_pix
     
-    return Image.fromarray(disp_pix.astype('uint8'), mode = 'L')
-
-
+    #return Image.fromarray(disp_pix.astype('uint8'), mode = 'L')
 
 '''
 This function takes a ground truth disparity image and a real disparity image and can be used

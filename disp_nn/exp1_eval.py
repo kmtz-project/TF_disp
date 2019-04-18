@@ -14,16 +14,20 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 colorama.init()
 
 samples_fname  = "../samples/Middlebury_scenes_2014/trainingQ/"
-handlers_list   = ["convFullNN", "opencvSGBM"]
 samples_list   =  [
-    #"Adirondack", 
-    #"ArtL", 
-    #"Motorcycle", 
-    #"Piano", 
-    #"Recycle", 
-    #"Shelves", 
+    "Adirondack", 
+    "ArtL", 
+    "Motorcycle", 
+    "Piano", 
+    "Recycle", 
+    "Shelves", 
     "Teddy",
     ]
+#samples_list   = ["Motorcycle"]
+#samples_fname  = "../samples/"
+
+handlers_list   = ["convFullNN", "convFastNN", "opencvSGBM", "ELAS"]
+
 
 for sample_name in samples_list:
     print(colored("-> " + sample_name, 'green'))

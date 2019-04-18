@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.14.1)
+cmake_minimum_required(VERSION 3.10.1)
 
 project(Vision VERSION 0.1)
 
@@ -7,7 +7,8 @@ find_package( OpenCV 4.0.1 REQUIRED )
 set(BUILD_DIR "D:/projects/repo/TF_disp/disp_nn/capi/build")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "D:/projects/repo/TF_disp/disp_nn/capi/bin")
 set(PROJECT_SOURCE_DIR "D:/projects/repo/TF_disp/disp_nn/capi/src")
-set(CMAKE_GENERATOR, "Visual Studio 15 2017 Win64")
+
+set(OpenCV_STATIC "")
 
 include_directories(
     "D:/program/boost_1_69_0"
@@ -21,9 +22,9 @@ link_directories(
     "C:/Users/bsvse/AppData/Local/Programs/Python/Python37/libs"
 )
 
-add_library(example SHARED "${PROJECT_SOURCE_DIR}/test.cpp")
+#add_library(example SHARED "${PROJECT_SOURCE_DIR}/test.cpp")
 add_library(sgbm SHARED "${PROJECT_SOURCE_DIR}/sgbm.cpp")
 
-target_link_libraries(sgbm ${OpenCV_LIBS} )
+target_link_libraries(sgbm ${OpenCV_LIBS} "-static")
 
 

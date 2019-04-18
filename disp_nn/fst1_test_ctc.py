@@ -16,16 +16,16 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0'
 # constants
 conv_feature_maps = 112
 dense_size = 384
-patch_size = 11
-image_name = "kron"
+patch_size = 9
+image_name = "Motorcycle"
 cpu_only = True
 
 # fix random seed for reproducibility
 numpy.random.seed(7)
 
 # set GPU use
-if cpu_only:
-    utils.set_gpu(False)
+# if cpu_only:
+#     utils.set_gpu(False)
 
 # create convolutional part models
 left_pic = Image.open("../samples/" + image_name + "/im0.png")
@@ -36,7 +36,7 @@ ctc_left_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name
 ctc_left_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="lc2") (ctc_left_conv)
 ctc_left_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="lc3") (ctc_left_conv)
 ctc_left_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="lc4") (ctc_left_conv)
-ctc_left_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="lc5") (ctc_left_conv)
+#ctc_left_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="lc5") (ctc_left_conv)
 ctc_left_flatten = Flatten(name = "lf")(ctc_left_conv)
 
 ctc_right_input = Input(shape=(ctc_height, ctc_width, 1, ))
@@ -44,13 +44,13 @@ ctc_right_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", nam
 ctc_right_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="rc2") (ctc_right_conv)
 ctc_right_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="rc3") (ctc_right_conv)
 ctc_right_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="rc4") (ctc_right_conv)
-ctc_right_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="rc5") (ctc_right_conv)
+#ctc_right_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="rc5") (ctc_right_conv)
 ctc_right_flatten = Flatten(name = "rf")(ctc_right_conv)
 
 lctc_model = Model(inputs=ctc_left_input, outputs=ctc_left_flatten)
 rctc_model = Model(inputs=ctc_right_input, outputs=ctc_right_flatten)
-lctc_model.load_weights("weights/acc1_weights6.h5", by_name = True)
-rctc_model.load_weights("weights/acc1_weights6.h5", by_name = True)
+lctc_model.load_weights("weights/fst1_weights1.h5", by_name = True)
+rctc_model.load_weights("weights/fst1_weights1.h5", by_name = True)
 
 # convolve images
 left, right = data.convolve_images_ctc("../samples/" + image_name + "/", patch_size, conv_feature_maps, lctc_model, rctc_model)

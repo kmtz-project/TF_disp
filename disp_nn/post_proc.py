@@ -4,7 +4,7 @@ import numpy
 
 # constants
 patch_size = 11
-image_name = "pattern1"
+image_name = "kron"
 error_threshold = 12
 max_disp = 60
 cpu_only = True

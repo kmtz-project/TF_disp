@@ -23,8 +23,8 @@ samples_list   =  [
     "Shelves", 
     "Teddy",
     ]
-#samples_list   = ["Motorcycle"]
-#samples_fname  = "../samples/"
+# samples_list   = ["Motorcycle"]
+# samples_fname  = "../samples/"
 
 handlers_list   = ["convFullNN", "convFastNN", "opencvSGBM", "ELAS"]
 

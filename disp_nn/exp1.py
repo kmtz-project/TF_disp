@@ -4,13 +4,14 @@ import numpy
 from shutil import copyfile
 import colorama
 from termcolor import colored
-from exp.routine import *
+from exp.handlers import *
 
 # set log level ('0' - all messages, '1' - no info messages, '2' - no warning messages)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 colorama.init()
 
 samples_list   = ["Adirondack", "ArtL", "Motorcycle", "Piano", "Recycle", "Shelves", "Teddy"]
+# samples_list   = ["Motorcycle"]
 samples_fname  = "../samples/Middlebury_scenes_2014/trainingQ/"
 # samples_list    = ["pattern1"]
 # samples_fname   = "../samples/"
@@ -41,5 +42,5 @@ for sample_name in samples_list:
     opencvSGBM_compute(results_fname, sample_name, max_disp)
 
     print("handler_name: "+ colored("ELAS", 'yellow'))
-    elas_compute(results_fname, sample_name, max_disp)
+    pyelas_compute(results_fname, sample_name, max_disp)
 

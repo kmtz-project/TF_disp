@@ -70,30 +70,6 @@ np::ndarray compute(np::ndarray data, int cross_size, float P)
 					float * row_rd = predict.ptr<float>(v_ptr, h_ptr);
 					float * row_ld = predict.ptr<float>(v_ptr, ld_ptr_y);
 
-					/*float row_h_prev = row_h[d];
-					float row_h_next = row_h[d];
-					
-					if (d - 1 >= 0) row_h_prev = row_h[d - 1] + P;
-					if (d + 1 < max_disp) row_h_next = row_h[d + 1] + P;
-
-					float h_array[3] = {
-						row_h[d],
-						row_h_prev,
-						row_h_next
-					}; 
-
-					float row_v_prev = row_v[d];
-					float row_v_next = row_v[d];
-
-					if (d - 1 >= 0) row_v_prev = row_v[d - 1] + P;
-					if (d + 1 < max_disp) row_v_next = row_v[d + 1] + P;
-
-					float v_array[3] = {
-						row_v[d],
-						row_v_prev,
-						row_v_next
-					};*/
-
 					cost_h  += row_h[d];
 					cost_v  += row_v[d];
 					cost_rd += row_rd[d];

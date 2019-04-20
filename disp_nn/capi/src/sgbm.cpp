@@ -6,39 +6,39 @@
 #include <boost/python/extract.hpp>
 #include <boost/python/numpy.hpp>
 
-// OpenCV 4.0.1 is required
-#include <opencv2/core.hpp>
-// -------------------------
-
 #include <iostream>
 
 using namespace boost::python;
 namespace np = boost::python::numpy;
+
+float * get_row(float * data, int i,  int j, int column_num, int el_num)
+{
+	return (data + el_num * (i * column_num + j));
+}
 
 np::ndarray compute(np::ndarray data, int cross_size, float P)
 {
 	const int max_disp = data.shape(2);
 	const int n        = data.shape(0);
 	const int m        = data.shape(1) + max_disp;
+	const int p_column = data.shape(1);
 	
 	tuple out_shape = make_tuple(n, m);
 	np::dtype dtype = np::dtype::get_builtin<int>();
 	np::ndarray disp_img = np::zeros(out_shape, dtype);
 	
 	int shape[3] = { n, m - max_disp, max_disp };
-	cv::Mat predict   = cv::Mat(3, shape, CV_32F, data.get_data());
-	cv::Mat sgbm_cost = cv::Mat(3, shape, CV_32F);
+
+	float * predict = (float *) data.get_data();
+	std::vector<float> cost_row(max_disp, 0);
 
 	float * row = nullptr;
-	float * cost_row = nullptr;
 
 	for (int i = 0; i < n; i++) 
 	{
 		for (int j = max_disp; j < m; j++)
 		{
-
-			row      = predict.ptr<float>(i, j - max_disp);
-			cost_row = sgbm_cost.ptr<float>(i, j - max_disp);
+			row = get_row(predict, i, j - max_disp, p_column, max_disp);
 
 			for (int d = 0; d < max_disp; d++)
 			{
@@ -63,12 +63,12 @@ np::ndarray compute(np::ndarray data, int cross_size, float P)
 					if (v_ptr >= n) v_ptr = n - 1;
 					if (ld_ptr_y < 0) ld_ptr_y = 0;
 					if (ld_ptr_y >= m - max_disp) ld_ptr_y = m - max_disp - 1;
-									   					 				  					
-					float * row_h = predict.ptr<float>(i, h_ptr);
-					float * row_v = predict.ptr<float>(v_ptr, j - max_disp);
 
-					float * row_rd = predict.ptr<float>(v_ptr, h_ptr);
-					float * row_ld = predict.ptr<float>(v_ptr, ld_ptr_y);
+					float * row_h = get_row(predict, i, h_ptr, p_column, max_disp);
+					float * row_v = get_row(predict, v_ptr, j - max_disp, p_column, max_disp);
+
+					float * row_rd = get_row(predict, v_ptr, h_ptr, p_column, max_disp);
+					float * row_ld = get_row(predict, v_ptr, ld_ptr_y, p_column, max_disp);
 
 					cost_h  += row_h[d];
 					cost_v  += row_v[d];
@@ -79,8 +79,7 @@ np::ndarray compute(np::ndarray data, int cross_size, float P)
 				cost_row[d] = (cost_h + cost_v + (cost_rd + cost_ld)/3)/4;
 			}
 
-			std::vector<float> disp_row(cost_row, cost_row + max_disp);
-			int i_min = std::min_element(disp_row.begin(), disp_row.end()) - disp_row.begin();
+			int i_min = std::min_element(cost_row.begin(), cost_row.end()) - cost_row.begin();
 
 			disp_img[i][j] = i_min;
 			

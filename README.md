@@ -14,3 +14,12 @@ Folder structure:
 Training is done by **acc1_teach.py**. Several parameters of the network can be adjusted.
 
 Testing is done by **acc1_test_part_gpu.py**. Maximum disparity and image name must be set before testing.
+
+## References
+
+Our work was inspired by this papers:
+
+1. A. Geiger, M. Roser and R. Urtasun. Efficient Large-Scale Stereo Matching. Asian Conference on Computer Vision (ACCV), 2010.
+2. Jure Žbontar and Yann LeCun. Stereo matching by training a convolutional neural network to compare image patches. J. Mach. Learn. Res. 17, 1 (January 2016), 2287-2318.
+
+

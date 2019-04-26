@@ -22,8 +22,8 @@ def convFulNN_compute(results_fname, sample_name, w_filename, max_disp):
     dnet.createCTCModels(ctc_height, ctc_width)
     dnet.loadCTCWeights(w_filename)
     dnet.convolve_images_ctc(results_fname + sample_name)
-    numpy.save("np_data/w9/" + sample_name + "_left_conv",dnet.conv_left_patches)
-    numpy.save("np_data/w9/" + sample_name + "_right_conv",dnet.conv_right_patches)
+    numpy.save("../results/" + sample_name + "/" + handler_name + "/" + sample_name + "_left_conv",dnet.conv_left_patches)
+    numpy.save("../results/" + sample_name + "/" + handler_name + "/" + sample_name + "_right_conv",dnet.conv_right_patches)
 
     # get predictions
     dnet.createDTCModel()
@@ -54,8 +54,8 @@ def convFastNN_compute(results_fname, sample_name, w_filename, max_disp):
     dnet.createCTCModels(ctc_height, ctc_width)
     dnet.loadCTCWeights(w_filename)
     dnet.convolve_images_ctc(results_fname + sample_name)
-    numpy.save("np_data/fst/" + sample_name + "_left_conv",dnet.conv_left_patches)
-    numpy.save("np_data/fst/" + sample_name + "_right_conv",dnet.conv_right_patches)
+    numpy.save("../results/" + sample_name + "/" + handler_name + "/" + sample_name + "_left_conv",dnet.conv_left_patches)
+    numpy.save("../results/" + sample_name + "/" + handler_name + "/" + sample_name + "_right_conv",dnet.conv_right_patches)
 
     # get predictions
     dnet.disp_map_from_conv_dtc(sample_name)
@@ -154,8 +154,8 @@ def elasCNN_compute(results_fname, sample_name, max_disp, cosine_weight):
     im = im.convert("L")
     im.save(image_right_filename + ".pgm")
 
-    conv_left = numpy.load("np_data/fst/" + sample_name + "_left_conv.npy")
-    conv_right = numpy.load("np_data/fst/" + sample_name + "_right_conv.npy")
+    conv_left = numpy.load("../results/" + sample_name + "/convFastNN/" + sample_name + "_left_conv.npy")
+    conv_right = numpy.load("../results/" + sample_name + "/convFastNN/" + sample_name + "_right_conv.npy")
 
     conv_left = conv_left.astype(dtype=numpy.float32)
     conv_right = conv_right.astype(dtype=numpy.float32)
@@ -189,8 +189,8 @@ def elasCNNsup_compute(results_fname, sample_name, max_disp, cosine_weight, supp
     im = im.convert("L")
     im.save(image_right_filename + ".pgm")
 
-    conv_left = numpy.load("np_data/fst/" + sample_name + "_left_conv.npy")
-    conv_right = numpy.load("np_data/fst/" + sample_name + "_right_conv.npy")
+    conv_left = numpy.load("../results/" + sample_name + "/convFastNN/" + sample_name + "_left_conv.npy")
+    conv_right = numpy.load("../results/" + sample_name + "/convFastNN/" + sample_name + "_right_conv.npy")
     #mask = numpy.load("np_data/fst/" + sample_name + "_mask.npy")
 
     conv_left = conv_left.astype(dtype=numpy.float32)

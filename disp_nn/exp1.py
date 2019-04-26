@@ -10,14 +10,14 @@ from exp.handlers import *
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 colorama.init()
 
-samples_list   = ["Adirondack", "ArtL", "Motorcycle", "Piano", "Recycle", "Shelves", "Teddy"]
+#samples_list   = ["Adirondack", "ArtL", "Motorcycle", "Piano", "Recycle", "Shelves", "Teddy"]
 samples_fname  = "../samples/Middlebury_scenes_2014/testQ/"
 #samples_fname  = "../samples/Middlebury_scenes_2014/trainingQ/"
-#samples_list   = ["Australia","AustraliaP","Bicycle2","Classroom2","Classroom2E","Computer","Crusade","CrusadeP","Djembe","DjembeL","Hoops","Livingroom","Newkuba","Plants","Staircase"]
+samples_list   = ["Australia","AustraliaP","Bicycle2","Classroom2","Classroom2E","Computer","Crusade","CrusadeP","Djembe","DjembeL","Hoops","Livingroom","Newkuba","Plants","Staircase"]
 
-#samples_list    = ["Teddy"]
+#samples_list    = ["Australia"]
 # samples_fname   = "../samples/"
-w_full_filename  = "weights/acc2_weights1.h5"
+w_full_filename  = "weights/acc1_weights6.h5"
 w_fast_filename = "weights/fst1_weights1.h5"
 max_disp        = 64
 cosine_weight   = 50
@@ -40,7 +40,7 @@ for sample_name in samples_list:
     copyfile(sample_fname + "/im1.png", results_fname + sample_name + "/im1.png")
     #----
 
-    print("handler_name: "+ colored("convFulNN", 'yellow'))
+    print("handler_name: "+ colored("convFullNN", 'yellow'))
     convFulNN_compute(results_fname, sample_name, w_full_filename, max_disp)
 
     print("handler_name: "+ colored("convFastNN", 'yellow'))

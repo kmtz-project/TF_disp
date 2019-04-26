@@ -364,8 +364,8 @@ Takes two disparity images, ground truth and real, and compares them to calculat
 using the error threshold. Also saves a "filtered_disparity" - real disparity with only good pixels kept.
 '''
 def comp_error_in_area(name1, name2, patch_size, max_disp, error_threshold):
-    disp_ref = Image.open(name1 + ".png")
-    disp = Image.open(name2 + ".png")
+    disp_ref = Image.open(name1 + ".png").convert("L")
+    disp = Image.open(name2 + ".png").convert("L")
     width, height = disp.size
     disp_ref_pix = numpy.atleast_1d(disp_ref)
     disp_pix = numpy.atleast_1d(disp)

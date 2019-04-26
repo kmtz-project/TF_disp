@@ -11,13 +11,21 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 colorama.init()
 
 samples_list   = ["Adirondack", "ArtL", "Motorcycle", "Piano", "Recycle", "Shelves", "Teddy"]
-# samples_list   = ["Motorcycle"]
-samples_fname  = "../samples/Middlebury_scenes_2014/trainingQ/"
-# samples_list    = ["pattern1"]
+samples_fname  = "../samples/Middlebury_scenes_2014/testQ/"
+#samples_fname  = "../samples/Middlebury_scenes_2014/trainingQ/"
+#samples_list   = ["Australia","AustraliaP","Bicycle2","Classroom2","Classroom2E","Computer","Crusade","CrusadeP","Djembe","DjembeL","Hoops","Livingroom","Newkuba","Plants","Staircase"]
+
+#samples_list    = ["Teddy"]
 # samples_fname   = "../samples/"
-w_ful_filename  = "weights/acc1_weights6.h5"
+w_full_filename  = "weights/acc2_weights1.h5"
 w_fast_filename = "weights/fst1_weights1.h5"
 max_disp        = 64
+cosine_weight   = 50
+support_cosine_weight = 1
+support_threshold = 0.93
+window_size = 3
+std_th = 8
+std_filter = 0
 results_fname   = "../results/"
 
 for sample_name in samples_list:
@@ -33,7 +41,7 @@ for sample_name in samples_list:
     #----
 
     print("handler_name: "+ colored("convFulNN", 'yellow'))
-    convFulNN_compute(results_fname, sample_name, w_ful_filename, max_disp)
+    convFulNN_compute(results_fname, sample_name, w_full_filename, max_disp)
 
     print("handler_name: "+ colored("convFastNN", 'yellow'))
     convFastNN_compute(results_fname, sample_name, w_fast_filename, max_disp)
@@ -43,4 +51,17 @@ for sample_name in samples_list:
 
     print("handler_name: "+ colored("ELAS", 'yellow'))
     pyelas_compute(results_fname, sample_name, max_disp)
+
+    print("handler_name: "+ colored("ELAS-CNN", 'yellow'))
+    elasCNN_compute(results_fname, sample_name, max_disp, cosine_weight)
+
+    print("handler_name: "+ colored("ELAS-CNN-sup", 'yellow'))
+    elasCNNsup_compute(results_fname, sample_name, max_disp, cosine_weight, support_cosine_weight, support_threshold, std_filter)
+    
+#-----------------------------------------------------------------------------------------------------------------------------------
+    #print("handler_name: "+ colored("ELAS-CNN-fusion", 'yellow'))
+    #elasCNNfusion_compute(results_fname, sample_name, max_disp, cosine_weight, window_size, std_th)
+
+    #print("handler_name: "+ colored("ELAS-CNN-std", 'yellow'))
+    #elasCNNstd_compute(results_fname, sample_name, max_disp, cosine_weight, window_size, std_th)
 

@@ -14,6 +14,7 @@ class ConvFullNN:
     lctc_model = None
     rctc_model = None
     dtc_model  = None
+    full_model = None
 
     conv_left_patches  = None
     conv_right_patches = None
@@ -21,6 +22,7 @@ class ConvFullNN:
     conv_feature_maps = 112
     dense_size = 384
     patch_size = 11
+    dense_num  = 4
     max_disp   = 60
     w_filename = ""
     name       = ""
@@ -31,26 +33,53 @@ class ConvFullNN:
         self.results_fname = results_fname
 
     def createResultDir(self, sample_name):
-        os.makedirs(self.results_fname + sample_name + "/" + self.name + "/", exist_ok=True) 
+        os.makedirs(self.results_fname + sample_name + "/" + self.name + "/", exist_ok=True)
+
+    def createFullModel(self):
+        patch_size = self.patch_size
+        conv_feature_maps = self.conv_feature_maps
+        num_conv = int((patch_size-1)/2)
+        dense_size = self.dense_size
+        dense_num = self.dense_num
+        
+        # create model
+        left_input = Input(shape=(patch_size, patch_size, 1, ))
+        left_conv = left_input
+        for i in range(1, num_conv+1):
+            left_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="lc"+str(i)) (left_conv)
+        left_flatten = Flatten(name = "lf")(left_conv)
+
+        right_input = Input(shape=(patch_size, patch_size, 1, ))
+        right_conv = right_input
+        for i in range(1, num_conv+1):
+            right_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="rc"+str(i)) (right_conv)
+        right_flatten = Flatten(name = "rf")(right_conv)
+
+        dense_layer = Concatenate(name = "d1")([left_flatten, right_flatten])
+        if dense_num > 2:
+            for i in range(2,dense_num):
+                dense_layer = Dense(dense_size, activation="relu", name = "d"+str(i))(dense_layer)
+        output_layer = Dense(1, activation="sigmoid", name = "d"+str(dense_num))(dense_layer)
+        #output_layer = Dot(axes=-1, normalize = True)([left_flatten, right_flatten])
+
+        model = Model(inputs=[left_input, right_input], outputs=output_layer)
+        self.full_model=model
 
     def createCTCModels(self, ctc_height, ctc_width):
-
+        patch_size = self.patch_size
         conv_feature_maps = self.conv_feature_maps
+        num_conv = int((patch_size-1)/2)
 
         ctc_left_input = Input(shape=(ctc_height, ctc_width, 1, ))
-        ctc_left_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="lc1") (ctc_left_input)
-        ctc_left_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="lc2") (ctc_left_conv)
-        ctc_left_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="lc3") (ctc_left_conv)
-        ctc_left_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="lc4") (ctc_left_conv)
-        ctc_left_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="lc5") (ctc_left_conv)
+        ctc_left_conv = ctc_left_input
+        for i in range(1, num_conv+1):
+            ctc_left_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="lc"+str(i)) (ctc_left_conv)
         ctc_left_flatten = Flatten(name = "lf")(ctc_left_conv)
 
         ctc_right_input = Input(shape=(ctc_height, ctc_width, 1, ))
-        ctc_right_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="rc1") (ctc_right_input)
-        ctc_right_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="rc2") (ctc_right_conv)
-        ctc_right_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="rc3") (ctc_right_conv)
-        ctc_right_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="rc4") (ctc_right_conv)
-        ctc_right_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="rc5") (ctc_right_conv)
+        ctc_right_conv = ctc_right_input
+        for i in range(1, num_conv+1):
+            ctc_right_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="rc"+str(i)) (ctc_right_conv)
         ctc_right_flatten = Flatten(name = "rf")(ctc_right_conv)
 
         self.lctc_model = Model(inputs=ctc_left_input, outputs=ctc_left_flatten)
@@ -65,42 +94,23 @@ class ConvFullNN:
         patch_size = self.patch_size
         conv_feature_maps = self.conv_feature_maps
         dense_size = self.dense_size
+        dense_num = self.dense_num
+        self.createFullModel()
 
-        left_input = Input(shape=(patch_size, patch_size, 1, ))
-        left_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="lc1") (left_input)
-        left_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="lc2") (left_conv)
-        left_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="lc3") (left_conv)
-        left_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="lc4") (left_conv)
-        left_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="lc5") (left_conv)
-        left_flatten = Flatten(name = "left_flatten_layer")(left_conv)
-
-        right_input = Input(shape=(patch_size, patch_size, 1, ))
-        right_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="rc1") (right_input)
-        right_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="rc2") (right_conv)
-        right_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="rc3") (right_conv)
-        right_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="rc4") (right_conv)
-        right_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="rc5") (right_conv)
-        right_flatten = Flatten(name = "right_flatten_layer")(right_conv)
-
-        conc_layer = Concatenate(name = "d1")([left_flatten, right_flatten])
-        dense_layer = Dense(dense_size, activation="relu", name = "d2")(conc_layer)
-        dense_layer = Dense(dense_size, activation="relu", name = "d3")(dense_layer)
-        output_layer = Dense(1, activation="sigmoid", name = "d4")(dense_layer)
-
-        model = Model(inputs=[left_input, right_input], outputs=output_layer)
+        model = self.full_model
         model.load_weights(self.w_filename, by_name = True)
 
         # replacing dense model with convolutional (dtc: dense to convolutional)
         dtc_height = self.conv_left_patches.shape[0]
         dtc_width  = self.conv_left_patches.shape[1] - self.max_disp
         dtc_input  = Input(shape=(dtc_height, dtc_width, conv_feature_maps*2))
-        w,b = model.get_layer("d2").get_weights()
-        new_w = numpy.expand_dims(numpy.expand_dims(w, axis = 0), axis = 0)
-        dtc_layer = Conv2D(dense_size, kernel_size=1, activation="relu", name="dtc1", weights=[new_w,b])(dtc_input)
-        w,b = model.get_layer("d3").get_weights()
-        new_w = numpy.expand_dims(numpy.expand_dims(w, axis = 0), axis = 0)
-        dtc_layer = Conv2D(dense_size, kernel_size=1, activation="relu", name="dtc2", weights=[new_w,b])(dtc_layer)
-        w,b = model.get_layer("d4").get_weights()
+        dtc_layer = dtc_input
+        if dense_num > 2:
+            for i in range(2,dense_num):
+                w,b = model.get_layer("d"+str(i)).get_weights()
+                new_w = numpy.expand_dims(numpy.expand_dims(w, axis = 0), axis = 0)
+                dtc_layer = Conv2D(dense_size, kernel_size=1, activation="relu", name="dtc"+str(i-1), weights=[new_w,b])(dtc_input)
+        w,b = model.get_layer("d"+str(dense_num)).get_weights()
         new_w = numpy.expand_dims(numpy.expand_dims(w, axis = 0), axis = 0)
         dtc_output = Conv2D(1, kernel_size=1, activation="sigmoid", name="dtc_out", weights=[new_w,b])(dtc_layer)
         self.dtc_model = Model(inputs = dtc_input, outputs = dtc_output)

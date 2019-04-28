@@ -1,5 +1,5 @@
 import os
-#import data
+import data
 import numpy as np
 from shutil import copyfile
 from utils import pfm
@@ -13,15 +13,15 @@ from termcolor import colored
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 colorama.init()
 
-#samples_fname  = "../samples/Middlebury_scenes_2014/trainingQ/"
+samples_fname  = "../samples/Middlebury_scenes_2014/trainingQ/"
 #samples_list   =  ["Adirondack", "ArtL", "Motorcycle", "Piano", "Recycle", "Shelves", "Teddy",]
-samples_fname  = "../samples/Middlebury_scenes_2014/testQ/"
-samples_list   = ["Australia","AustraliaP","Bicycle2","Classroom2","Classroom2E","Computer","Crusade","CrusadeP","Djembe","DjembeL","Hoops","Livingroom","Newkuba","Plants","Staircase"]
-#samples_list   = ["Teddy"]
+#samples_fname  = "../samples/Middlebury_scenes_2014/testQ/"
+#samples_list   = ["Australia","AustraliaP","Bicycle2","Classroom2","Classroom2E","Computer","Crusade","CrusadeP","Djembe","DjembeL","Hoops","Livingroom","Newkuba","Plants","Staircase"]
+samples_list   = ["Motorcycle"]
 #samples_fname  = "../samples/"
 
-handlers_list   = ["convFullNN", "convFastNN", "opencvSGBM", "ELAS", "ELAS-CNN", "ELAS-CNN-sup"]#, "ELAS-CNN-fusion", "ELAS-CNN-std"]
-#handlers_list   = ["ELAS-CNN-std"]
+#handlers_list   = ["convFullNN", "convFastNN", "opencvSGBM", "ELAS", "ELAS-CNN", "ELAS-CNN-sup"]#, "ELAS-CNN-fusion", "ELAS-CNN-std"]
+handlers_list   = ["convFastNN"]
 file = open("evaluation_test.txt", "w")
 
 for sample_name in samples_list:
@@ -31,10 +31,11 @@ for sample_name in samples_list:
     file.write("-"*50 + "\n")
     sample_fname   = samples_fname + sample_name
     golden_disp_fname = samples_fname + sample_name + "/disp0GT.pfm"
+    calib_file = open(sample_fname + "/calib.txt")
+    max_disp = data.find_max_disp(calib_file)
 
     for handler_name in handlers_list:
         calc_disp_fname   = "../results/" + sample_name + "/" + handler_name + "/calc_disp.png"
-        max_disp = 64
 
         golden_disp = pfm.readPfm(golden_disp_fname)
         calc_disp   = cv2.imread(calc_disp_fname, 0)
@@ -58,6 +59,7 @@ for sample_name in samples_list:
         calc_disp[:, max_disp:] = (255*calc_disp[:, max_disp:])/max_disp
         cv2.imwrite("../results/" + sample_name + "/" + handler_name + "/calc_disp_norm.png", calc_disp)
 
+    calib_file.close()
 file.close()
 
 

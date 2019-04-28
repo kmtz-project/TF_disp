@@ -14,6 +14,7 @@ class ConvFastNN:
     lctc_model = None
     rctc_model = None
     dtc_model  = None
+    fast_model = None
 
     conv_left_patches  = None
     conv_right_patches = None
@@ -38,22 +39,45 @@ class ConvFastNN:
         self.lctc_model.load_weights(filename, by_name = True)
         self.rctc_model.load_weights(filename, by_name = True)
 
-    def createCTCModels(self, ctc_height, ctc_width):
-
+    def createFastModel(self):
+        patch_size = self.patch_size
         conv_feature_maps = self.conv_feature_maps
+        num_conv = int((patch_size-1)/2)
+        dense_size = self.dense_size
+        
+        # create model
+        left_input = Input(shape=(patch_size, patch_size, 1, ))
+        left_conv = left_input
+        for i in range(1, num_conv+1):
+            left_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="lc"+str(i)) (left_conv)
+        left_flatten = Flatten(name = "lf")(left_conv)
+
+        right_input = Input(shape=(patch_size, patch_size, 1, ))
+        right_conv = right_input
+        for i in range(1, num_conv+1):
+            right_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="rc"+str(i)) (right_conv)
+        right_flatten = Flatten(name = "rf")(right_conv)
+
+        output_layer = Dot(axes=-1, normalize = True)([left_flatten, right_flatten])
+
+        model = Model(inputs=[left_input, right_input], outputs=output_layer)
+        self.fast_model=model
+
+    def createCTCModels(self, ctc_height, ctc_width):
+        patch_size = self.patch_size
+        conv_feature_maps = self.conv_feature_maps
+        num_conv = int((patch_size-1)/2)
 
         ctc_left_input = Input(shape=(ctc_height, ctc_width, 1, ))
-        ctc_left_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="lc1") (ctc_left_input)
-        ctc_left_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="lc2") (ctc_left_conv)
-        ctc_left_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="lc3") (ctc_left_conv)
-        ctc_left_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="lc4") (ctc_left_conv)
+        ctc_left_conv = ctc_left_input
+        for i in range(1, num_conv+1):
+            ctc_left_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="lc"+str(i)) (ctc_left_conv)
         ctc_left_flatten = Flatten(name = "lf")(ctc_left_conv)
 
         ctc_right_input = Input(shape=(ctc_height, ctc_width, 1, ))
-        ctc_right_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="rc1") (ctc_right_input)
-        ctc_right_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="rc2") (ctc_right_conv)
-        ctc_right_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="rc3") (ctc_right_conv)
-        ctc_right_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="rc4") (ctc_right_conv)
+        ctc_right_conv = ctc_right_input
+        for i in range(1, num_conv+1):
+            ctc_right_conv = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="rc"+str(i)) (ctc_right_conv)
         ctc_right_flatten = Flatten(name = "rf")(ctc_right_conv)
 
         self.lctc_model = Model(inputs=ctc_left_input, outputs=ctc_left_flatten)

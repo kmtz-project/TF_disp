@@ -76,9 +76,13 @@ def convFastNN_compute(results_fname, sample_name, w_filename, max_disp):
 def opencvSGBM_compute(results_fname, sample_name, max_disp):
     window_size = 3
     min_disp = 0
+    sgbm_max_disp = max_disp
+    if max_disp%16 > 0:
+        sgbm_max_disp = 16*(int(max_disp/16)+1)
+    print("sgbm_max_disp", sgbm_max_disp)
     stereo = cv2.StereoSGBM_create(
         minDisparity = 0,
-        numDisparities = max_disp,
+        numDisparities = sgbm_max_disp,
         blockSize = 2,
         uniquenessRatio = 15,
         speckleWindowSize = 0,

@@ -30,7 +30,7 @@ left = numpy.concatenate((left1,left2))
 right = numpy.concatenate((right1,right2))
 outputs = numpy.concatenate((outputs1,outputs2))
 
-print(left.shape)
+print(outputs.shape)
 
 left = left[0:training_size]
 right = right[0:training_size]

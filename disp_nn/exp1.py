@@ -43,14 +43,12 @@ for sample_name in samples_list:
     calib_file = open(sample_fname + "/calib.txt")
     max_disp = data.find_max_disp(calib_file)
 
-    #print("handler_name: "+ colored("convFullNN", 'yellow'))
-    #convFulNN_compute(results_fname, sample_name, w_full_filename, max_disp)
+    print("handler_name: "+ colored("convFullNN", 'yellow'))
+    convFulNN_compute(results_fname, sample_name, w_full_filename, max_disp)
 
     print("handler_name: "+ colored("convFastNN", 'yellow'))
     convFastNN_compute(results_fname, sample_name, w_fast_filename, max_disp)
 
-    calib_file.close()
-'''
     print("handler_name: "+ colored("opencvSGBM", 'yellow'))
     opencvSGBM_compute(results_fname, sample_name, max_disp)
 
@@ -58,12 +56,12 @@ for sample_name in samples_list:
     pyelas_compute(results_fname, sample_name, max_disp)
 
     print("handler_name: "+ colored("ELAS-CNN", 'yellow'))
-    elasCNN_compute(results_fname, sample_name, max_disp, cosine_weight)
+    elasCNN_compute(results_fname, sample_name, w_fast_filename, max_disp, cosine_weight)
 
-    #print("handler_name: "+ colored("ELAS-CNN-sup", 'yellow'))
-    #elasCNNsup_compute(results_fname, sample_name, max_disp, cosine_weight, support_cosine_weight, support_threshold, std_filter)
-'''
-    #calib_file.close()
+    print("handler_name: "+ colored("ELAS-CNN-sup", 'yellow'))
+    elasCNNsup_compute(results_fname, sample_name, max_disp, w_fast_filename, cosine_weight, support_cosine_weight, support_threshold, std_filter)
+
+    calib_file.close()
     
 #-----------------------------------------------------------------------------------------------------------------------------------
     #print("handler_name: "+ colored("ELAS-CNN-fusion", 'yellow'))

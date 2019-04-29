@@ -14,14 +14,14 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 colorama.init()
 
 samples_fname  = "../samples/Middlebury_scenes_2014/trainingQ/"
-#samples_list   =  ["Adirondack", "ArtL", "Motorcycle", "Piano", "Recycle", "Shelves", "Teddy",]
+samples_list   =  ["Adirondack", "ArtL", "Motorcycle", "Piano", "Recycle", "Shelves", "Teddy",]
 #samples_fname  = "../samples/Middlebury_scenes_2014/testQ/"
 #samples_list   = ["Australia","AustraliaP","Bicycle2","Classroom2","Classroom2E","Computer","Crusade","CrusadeP","Djembe","DjembeL","Hoops","Livingroom","Newkuba","Plants","Staircase"]
-samples_list   = ["Motorcycle"]
+# samples_list   = ["Motorcycle"]
 #samples_fname  = "../samples/"
 
-#handlers_list   = ["convFullNN", "convFastNN", "opencvSGBM", "ELAS", "ELAS-CNN", "ELAS-CNN-sup"]#, "ELAS-CNN-fusion", "ELAS-CNN-std"]
-handlers_list   = ["convFastNN"]
+handlers_list   = ["convFullNN", "convFastNN", "opencvSGBM", "ELAS", "ELAS-CNN", "ELAS-CNN-sup"]#, "ELAS-CNN-fusion", "ELAS-CNN-std"]
+# handlers_list   = ["convFastNN"]
 file = open("evaluation_test.txt", "w")
 
 for sample_name in samples_list:

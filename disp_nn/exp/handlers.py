@@ -8,7 +8,7 @@ from shutil import copyfile
 from utils import pfm
 import data
 
-from capi import pyelas, elasCNN, elasCNNsup, elasCNNstd
+from capi import pyelas, elasCNN, elasCNNsup
 
 def convFulNN_compute(results_fname, sample_name, w_filename, max_disp):
     handler_name = "convFullNN"
@@ -145,7 +145,7 @@ def pyelas_compute(results_fname, sample_name, max_disp):
 
     cv2.imwrite(sgbm_results_fname + "calc_disp_norm.png", 255*disp_pfm/max_disp)
 
-def elasCNN_compute(results_fname, sample_name, max_disp, cosine_weight):
+def elasCNN_compute(results_fname, sample_name, w_filename, max_disp, cosine_weight):
     
     image_left_filename  = results_fname + sample_name + "/im0"
     image_right_filename = results_fname + sample_name + "/im1"
@@ -158,8 +158,25 @@ def elasCNN_compute(results_fname, sample_name, max_disp, cosine_weight):
     im = im.convert("L")
     im.save(image_right_filename + ".pgm")
 
-    conv_left = numpy.load("../results/" + sample_name + "/convFastNN/" + sample_name + "_left_conv.npy")
-    conv_right = numpy.load("../results/" + sample_name + "/convFastNN/" + sample_name + "_right_conv.npy")
+    # Get convolution
+    handler_name = "ELAS-CNN"
+    dnet = ConvFastNN("ELAS-CNN", results_fname)
+    dnet.max_disp = max_disp
+
+    dnet.createResultDir(sample_name)
+    left_pic = Image.open(results_fname + sample_name + "/im0.png")
+    ctc_width, ctc_height = left_pic.size
+
+    dnet.createCTCModels(ctc_height, ctc_width)
+    dnet.loadCTCWeights(w_filename)
+    dnet.convolve_images_ctc(results_fname + sample_name)
+    numpy.save("../results/" + sample_name + "/" + handler_name + "/" + sample_name + "_left_conv",dnet.conv_left_patches)
+    numpy.save("../results/" + sample_name + "/" + handler_name + "/" + sample_name + "_right_conv",dnet.conv_right_patches)
+    del dnet
+    # ------------------------
+
+    conv_left = numpy.load("../results/" + sample_name + "/" + handler_name + "/" + sample_name + "_left_conv.npy")
+    conv_right = numpy.load("../results/" + sample_name + "/" + handler_name + "/" + sample_name + "_right_conv.npy")
 
     conv_left = conv_left.astype(dtype=numpy.float32)
     conv_right = conv_right.astype(dtype=numpy.float32)
@@ -180,7 +197,7 @@ def elasCNN_compute(results_fname, sample_name, max_disp, cosine_weight):
 
     cv2.imwrite(sgbm_results_fname + "calc_disp_norm.png", 255*disp_pfm/max_disp)
 
-def elasCNNsup_compute(results_fname, sample_name, max_disp, cosine_weight, support_cosine_weight, support_threshold, std_filter):
+def elasCNNsup_compute(results_fname, sample_name, max_disp, w_filename, cosine_weight, support_cosine_weight, support_threshold, std_filter):
     
     image_left_filename  = results_fname + sample_name + "/im0"
     image_right_filename = results_fname + sample_name + "/im1"
@@ -193,8 +210,25 @@ def elasCNNsup_compute(results_fname, sample_name, max_disp, cosine_weight, supp
     im = im.convert("L")
     im.save(image_right_filename + ".pgm")
 
-    conv_left = numpy.load("../results/" + sample_name + "/convFastNN/" + sample_name + "_left_conv.npy")
-    conv_right = numpy.load("../results/" + sample_name + "/convFastNN/" + sample_name + "_right_conv.npy")
+    # Get convolution
+    handler_name = "ELAS-CNN-sup"
+    dnet = ConvFastNN("ELAS-CNN-sup", results_fname)
+    dnet.max_disp = max_disp
+
+    dnet.createResultDir(sample_name)
+    left_pic = Image.open(results_fname + sample_name + "/im0.png")
+    ctc_width, ctc_height = left_pic.size
+
+    dnet.createCTCModels(ctc_height, ctc_width)
+    dnet.loadCTCWeights(w_filename)
+    dnet.convolve_images_ctc(results_fname + sample_name)
+    numpy.save("../results/" + sample_name + "/" + handler_name + "/" + sample_name + "_left_conv",dnet.conv_left_patches)
+    numpy.save("../results/" + sample_name + "/" + handler_name + "/" + sample_name + "_right_conv",dnet.conv_right_patches)
+    del dnet
+    # ------------------------
+
+    conv_left = numpy.load("../results/" + sample_name + "/" + handler_name + "/" + sample_name + "_left_conv.npy")
+    conv_right = numpy.load("../results/" + sample_name + "/" + handler_name + "/" + sample_name + "_right_conv.npy")
     #mask = numpy.load("np_data/fst/" + sample_name + "_mask.npy")
 
     conv_left = conv_left.astype(dtype=numpy.float32)

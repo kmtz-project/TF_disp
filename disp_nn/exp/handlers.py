@@ -8,7 +8,7 @@ from shutil import copyfile
 from utils import pfm
 import data
 
-from capi import pyelas, elasCNN, elasCNNsup
+from capi import pyelas, elasCNN, elasCNNsup, elasCNNgrid
 
 def convFulNN_compute(results_fname, sample_name, w_filename, max_disp):
     handler_name = "convFullNN"
@@ -242,6 +242,74 @@ def elasCNNsup_compute(results_fname, sample_name, max_disp, w_filename, cosine_
                        max_disp, 0, support_threshold, cosine_weight, support_cosine_weight, conv_left, conv_right)
 
     handler_name = "ELAS-CNN-sup"
+    sgbm_results_fname   = results_fname + sample_name + "/" + handler_name + "/"
+    outDispFileName      = sgbm_results_fname + "calc_disp.png"
+
+    os.makedirs(sgbm_results_fname, exist_ok=True) 
+
+    copyfile("disp.pfm", sgbm_results_fname + "calc_disp.pfm")
+    os.remove("disp.pfm")
+
+    disp_pfm = pfm.readPfm(sgbm_results_fname + "calc_disp.pfm")
+    cv2.imwrite(outDispFileName, disp_pfm)
+
+    cv2.imwrite(sgbm_results_fname + "calc_disp_norm.png", 255*disp_pfm/max_disp)
+
+def elasCNNgrid_compute(results_fname, sample_name, max_disp, w_filename, cosine_weight, grid_size):
+    
+    image_left_filename  = results_fname + sample_name + "/im0"
+    image_right_filename = results_fname + sample_name + "/im1"
+
+    im = Image.open(image_left_filename + ".png")
+    im = im.convert("L")
+    im.save(image_left_filename + ".pgm")
+
+    im = Image.open(image_right_filename + ".png")
+    im = im.convert("L")
+    im.save(image_right_filename + ".pgm")
+
+    handler_name = "ELAS-CNN-grid"
+    ctc_width, ctc_height = im.size
+    exists = os.path.isfile("../results/" + sample_name + "/" + handler_name + "/" + sample_name + "_left_conv.npy")
+    if not exists:
+    # Store configuration file values
+
+        dnet = ConvFastNN("ELAS-CNN-grid", results_fname)
+        dnet.max_disp = max_disp
+
+        dnet.createResultDir(sample_name)
+
+        dnet.createCTCModels(ctc_height, ctc_width)
+        dnet.loadCTCWeights(w_filename)
+        dnet.convolve_images_ctc(results_fname + sample_name)
+        numpy.save("../results/" + sample_name + "/" + handler_name + "/" + sample_name + "_left_conv",dnet.conv_left_patches)
+        numpy.save("../results/" + sample_name + "/" + handler_name + "/" + sample_name + "_right_conv",dnet.conv_right_patches)
+        del dnet
+    # ------------------------
+
+    conv_left = numpy.load("../results/" + sample_name + "/" + handler_name + "/" + sample_name + "_left_conv.npy")
+    conv_right = numpy.load("../results/" + sample_name + "/" + handler_name + "/" + sample_name + "_right_conv.npy")
+
+    # Create GT array
+    folder_name = results_fname + sample_name
+    occ_pic = Image.open(folder_name + "/mask0nocc.png").convert("L")
+    disp0_pix = pfm.readPfm(folder_name + "/disp0GT.pfm")
+    occ_pix = numpy.atleast_3d(occ_pic)
+    GT_arr = disp0_pix.copy()
+    
+    for i in range(ctc_height):
+        for j in range(ctc_width):
+            if occ_pix[i,j] < 255:
+                GT_arr[i,j] = -1
+
+    conv_left = conv_left.astype(dtype=numpy.float32)
+    conv_right = conv_right.astype(dtype=numpy.float32)
+    GT_arr = GT_arr.astype(dtype=numpy.float32)
+
+    elasCNNgrid.compute(image_left_filename + ".pgm", image_right_filename + ".pgm", "disp.pfm",
+                       max_disp, 0, cosine_weight, grid_size, GT_arr, conv_left, conv_right)
+
+    handler_name = "ELAS-CNN-grid"
     sgbm_results_fname   = results_fname + sample_name + "/" + handler_name + "/"
     outDispFileName      = sgbm_results_fname + "calc_disp.png"
 

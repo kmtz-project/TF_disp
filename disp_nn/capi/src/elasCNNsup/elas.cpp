@@ -41,7 +41,7 @@ Street, Fifth Floor, Boston, MA 02110-1301, USA
 
 using namespace std;
 
-void Elas::process (uint8_t* I1_,uint8_t* I2_,float* D1,float* D2,const int32_t* dims, float* conv_left, float* conv_right){
+void Elas::process (uint8_t* I1_,uint8_t* I2_,float* D1,float* D2,const int32_t* dims, float* conv_left, float* conv_right, np::ndarray np_grid){
   // get width, height and bytes per line
   width  = dims[0];
   height = dims[1];
@@ -71,7 +71,7 @@ void Elas::process (uint8_t* I1_,uint8_t* I2_,float* D1,float* D2,const int32_t*
 #ifdef PROFILE
   timer.start("Support Matches");
 #endif
-  vector<support_pt> p_support = computeSupportMatches(conv_left, conv_right, desc1.I_desc,desc2.I_desc);
+  vector<support_pt> p_support = computeSupportMatches(conv_left, conv_right, desc1.I_desc,desc2.I_desc,np_grid);
   
   // if not enough support points for triangulation
   if (p_support.size()<3) {
@@ -397,6 +397,7 @@ inline int16_t Elas::computeMatchingDisparity (float* conv_left, float* conv_rig
       }
     }
 
+    
     float* mask_row = get_row(param.mask, v,  u, width, 1);
     if (!right_image && mask_row[0] < 0 && param.std_filter) {
       return -1;
@@ -415,7 +416,7 @@ inline int16_t Elas::computeMatchingDisparity (float* conv_left, float* conv_rig
     return -1;
 }
 
-vector<Elas::support_pt> Elas::computeSupportMatches (float* conv_left, float* conv_right, uint8_t* I1_desc,uint8_t* I2_desc) {
+vector<Elas::support_pt> Elas::computeSupportMatches (float* conv_left, float* conv_right, uint8_t* I1_desc,uint8_t* I2_desc, np::ndarray np_grid) {
   
   // be sure that at half resolution we only need data
   // from every second line!
@@ -455,7 +456,7 @@ vector<Elas::support_pt> Elas::computeSupportMatches (float* conv_left, float* c
       }
     }
   }
-  cout << "sup good " << sup_good << endl;
+  //cout << "sup good " << sup_good << endl;
   // remove inconsistent support points
   removeInconsistentSupportPoints(D_can,D_can_width,D_can_height);
   
@@ -464,6 +465,12 @@ vector<Elas::support_pt> Elas::computeSupportMatches (float* conv_left, float* c
   // the triangulation process
   removeRedundantSupportPoints(D_can,D_can_width,D_can_height,5,1,true);
   removeRedundantSupportPoints(D_can,D_can_width,D_can_height,5,1,false);
+
+  for (int32_t u_can=1; u_can<D_can_width; u_can++) {
+    for (int32_t v_can=1; v_can<D_can_height; v_can++) {
+      np_grid[v_can][u_can] = *(D_can+getAddressOffsetImage(u_can,v_can,D_can_width));
+    }
+  }
   
   // move support points from image representation into a vector representation
   vector<support_pt> p_support;

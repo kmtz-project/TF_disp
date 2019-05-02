@@ -40,8 +40,9 @@ Street, Fifth Floor, Boston, MA 02110-1301, USA
 //namespace np = boost::python::numpy;
 
 using namespace std;
+namespace np = boost::python::numpy;
 
-void Elas::process (uint8_t* I1_,uint8_t* I2_,float* D1,float* D2,const int32_t* dims, float* conv_left, float* conv_right){
+void Elas::process (uint8_t* I1_,uint8_t* I2_,float* D1,float* D2,const int32_t* dims, float* conv_left, float* conv_right, np::ndarray np_grid){
   // get width, height and bytes per line
   width  = dims[0];
   height = dims[1];
@@ -71,7 +72,7 @@ void Elas::process (uint8_t* I1_,uint8_t* I2_,float* D1,float* D2,const int32_t*
 #ifdef PROFILE
   timer.start("Support Matches");
 #endif
-  vector<support_pt> p_support = computeSupportMatches(desc1.I_desc,desc2.I_desc);
+  vector<support_pt> p_support = computeSupportMatches(desc1.I_desc,desc2.I_desc,np_grid);
   
   // if not enough support points for triangulation
   if (p_support.size()<3) {
@@ -381,7 +382,7 @@ inline int16_t Elas::computeMatchingDisparity (const int32_t &u,const int32_t &v
     return -1;
 }
 
-vector<Elas::support_pt> Elas::computeSupportMatches (uint8_t* I1_desc,uint8_t* I2_desc) {
+vector<Elas::support_pt> Elas::computeSupportMatches (uint8_t* I1_desc,uint8_t* I2_desc, np::ndarray np_grid) {
   
   // be sure that at half resolution we only need data
   // from every second line!
@@ -429,6 +430,12 @@ vector<Elas::support_pt> Elas::computeSupportMatches (uint8_t* I1_desc,uint8_t* 
   // the triangulation process
   removeRedundantSupportPoints(D_can,D_can_width,D_can_height,5,1,true);
   removeRedundantSupportPoints(D_can,D_can_width,D_can_height,5,1,false);
+
+  for (int32_t u_can=1; u_can<D_can_width; u_can++) {
+    for (int32_t v_can=1; v_can<D_can_height; v_can++) {
+      np_grid[v_can][u_can] = *(D_can+getAddressOffsetImage(u_can,v_can,D_can_width));
+    }
+  }
   
   // move support points from image representation into a vector representation
   vector<support_pt> p_support;

@@ -565,3 +565,27 @@ def find_max_disp(file):
     max_disp_pos = [i for i in params if i.startswith('ndisp=')]
     max_disp = int(max_disp_pos[0][6::])
     return max_disp
+
+'''
+This function computes error of the support points grid.
+'''
+def comp_grid_error(sp_grid,grid_pix,disp_ref_pix,error_th,grid_step,grid_name):
+    error_pix=0
+    found_pix = 0
+    im_grid_h = int(grid_pix.shape[0]/grid_step)
+    im_grid_v = int(grid_pix.shape[1]/grid_step)
+    for i in range(1,sp_grid.shape[0]):
+        for j in range(1,sp_grid.shape[1]):
+            if i <= im_grid_h and j <= im_grid_v:
+                if not sp_grid[i,j] == -1:
+                    found_pix += 1
+                    grid_pix[i*grid_step,j*grid_step] = numpy.array([0,0,255])
+                    if abs(int(sp_grid[i,j])-int(disp_ref_pix[i*grid_step,j*grid_step]))>error_th:
+                        error_pix += 1
+                        grid_pix[i*grid_step,j*grid_step] = numpy.array([255,0,0])
+                else:
+                    grid_pix[i*grid_step,j*grid_step] = numpy.array([0,255,0])
+    print("error rate ", round(error_pix/found_pix,4))
+    print("num of grid points useful ", round(found_pix/(im_grid_h*im_grid_v),4))
+    img = Image.fromarray(grid_pix.astype('uint8'))
+    img.save(grid_name, "PNG")

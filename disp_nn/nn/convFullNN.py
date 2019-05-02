@@ -109,7 +109,7 @@ class ConvFullNN:
             for i in range(2,dense_num):
                 w,b = model.get_layer("d"+str(i)).get_weights()
                 new_w = numpy.expand_dims(numpy.expand_dims(w, axis = 0), axis = 0)
-                dtc_layer = Conv2D(dense_size, kernel_size=1, activation="relu", name="dtc"+str(i-1), weights=[new_w,b])(dtc_input)
+                dtc_layer = Conv2D(dense_size, kernel_size=1, activation="relu", name="dtc"+str(i-1), weights=[new_w,b])(dtc_layer)
         w,b = model.get_layer("d"+str(dense_num)).get_weights()
         new_w = numpy.expand_dims(numpy.expand_dims(w, axis = 0), axis = 0)
         dtc_output = Conv2D(1, kernel_size=1, activation="sigmoid", name="dtc_out", weights=[new_w,b])(dtc_layer)

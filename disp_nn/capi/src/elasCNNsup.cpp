@@ -60,8 +60,10 @@ void WriteFilePFM(float *data, int width, int height, const char* filename, floa
 }
 
 // compute disparities of pgm image input pair file_1, file_2
-void compute (const char* file_1, const char* file_2, const char* outfile, int maxdisp, int no_interp, float support_threshold,
+np::ndarray compute (const char* file_1, const char* file_2, const char* outfile, int maxdisp, int no_interp, float support_threshold,
               float cosine_weight, int std_filter, float support_cosine_weight, np::ndarray mask_arr, np::ndarray conv_left_arr, np::ndarray conv_right_arr) {
+/*np::ndarray compute (const char* file_1, const char* file_2, const char* outfile, int maxdisp, int no_interp, float support_threshold,
+              float cosine_weight, float support_cosine_weight, np::ndarray conv_left_arr, np::ndarray conv_right_arr) {*/
     float* conv_left = (float *) conv_left_arr.get_data();
     float* conv_right = (float *) conv_right_arr.get_data();
     clock_t c0 = clock();
@@ -70,17 +72,6 @@ void compute (const char* file_1, const char* file_2, const char* outfile, int m
     image<uchar> *I1,*I2;
     I1 = loadPGM(file_1);
     I2 = loadPGM(file_2);
-
-    // check for correct size
-    if (I1->width()<=0 || I1->height() <=0 || I2->width()<=0 || I2->height() <=0 ||
-	I1->width()!=I2->width() || I1->height()!=I2->height()) {
-	cout << "ERROR: Images must be of same size, but" << endl;
-	cout << "       I1: " << I1->width() <<  " x " << I1->height() << 
-	    ", I2: " << I2->width() <<  " x " << I2->height() << endl;
-	delete I1;
-	delete I2;
-	return;    
-    }
 
     // get image width and height
     int32_t width  = I1->width();
@@ -106,7 +97,20 @@ void compute (const char* file_1, const char* file_2, const char* outfile, int m
     param.mask = (float *) mask_arr.get_data();
     param.std_filter = std_filter;
     Elas elas(param);
-    elas.process(I1->data,I2->data,D1_data,D2_data,dims,conv_left, conv_right);
+
+    int32_t D_candidate_stepsize = param.candidate_stepsize;
+    if (param.subsampling)
+        D_candidate_stepsize += D_candidate_stepsize%2;
+    // create matrix for saving disparity candidates
+    int32_t D_can_width  = 0;
+    int32_t D_can_height = 0;
+    for (int32_t u=0; u<width;  u+=D_candidate_stepsize) D_can_width++;
+    for (int32_t v=0; v<height; v+=D_candidate_stepsize) D_can_height++;
+    boost::python::tuple out_shape = boost::python::make_tuple(D_can_height, D_can_width);
+    np::dtype dtype = np::dtype::get_builtin<int>();
+    np::ndarray np_grid = np::zeros(out_shape, dtype);
+
+    elas.process(I1->data,I2->data,D1_data,D2_data,dims,conv_left, conv_right, np_grid);
 
     // added runtime output - DS 4/4/2013
     clock_t c1 = clock();
@@ -122,6 +126,8 @@ void compute (const char* file_1, const char* file_2, const char* outfile, int m
     delete I2;
     free(D1_data);
     free(D2_data);
+
+    return np_grid;
 }
 
 BOOST_PYTHON_MODULE(elasCNNsup)

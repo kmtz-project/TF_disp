@@ -32,10 +32,15 @@ Street, Fifth Floor, Boston, MA 02110-1301, USA
 #include <emmintrin.h>
 #include <stdint.h>
 
+#include <boost/python.hpp>
+#include <boost/python/def.hpp>
+#include <boost/python/extract.hpp>
+#include <boost/python/numpy.hpp>
+
 #ifdef PROFILE
 #include "timer.h"
 #endif
-
+namespace np = boost::python::numpy;
 class Elas {
   
 public:
@@ -152,7 +157,7 @@ public:
   //         note: D1 and D2 must be allocated before (bytes per line = width)
   //               if subsampling is not active their size is width x height,
   //               otherwise width/2 x height/2 (rounded towards zero)
-  void process (uint8_t* I1,uint8_t* I2,float* D1,float* D2,const int32_t* dims, float* conv_left, float* conv_right);
+  void process (uint8_t* I1,uint8_t* I2,float* D1,float* D2,const int32_t* dims, float* conv_left, float* conv_right, np::ndarray np_grid);
   
 private:
   
@@ -184,7 +189,7 @@ private:
                                      int32_t redun_max_dist, int32_t redun_threshold, bool vertical);
   void addCornerSupportPoints (std::vector<support_pt> &p_support);
   inline int16_t computeMatchingDisparity (float* conv_left, float* conv_right,const int32_t &u,const int32_t &v,uint8_t* I1_desc,uint8_t* I2_desc,const bool &right_image);
-  std::vector<support_pt> computeSupportMatches (float* conv_left, float* conv_right,uint8_t* I1_desc,uint8_t* I2_desc);
+  std::vector<support_pt> computeSupportMatches (float* conv_left, float* conv_right,uint8_t* I1_desc,uint8_t* I2_desc,np::ndarray np_grid);
 
   // triangulation & grid
   std::vector<triangle> computeDelaunayTriangulation (std::vector<support_pt> p_support,int32_t right_image);

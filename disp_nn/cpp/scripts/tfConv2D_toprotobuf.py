@@ -9,25 +9,45 @@ patch_size = 9
 num_conv = int((patch_size-1)/2)
 conv_feature_maps = 112
 
-img = cv2.imread("../../../samples/Middlebury_scenes_2014/trainingQ/Motorcycle/im0.png", 0)
+#img = cv2.imread("../../../samples/Middlebury_scenes_2014/trainingQ/Motorcycle/im0.png", 0)
 
-data = numpy.zeros((img.shape[0], img.shape[1], 1))
+left_pic  = Image.open("../../../samples/Middlebury_scenes_2014/trainingQ/Motorcycle/im0.png").convert("L")
+data = numpy.atleast_3d(left_pic)
+
+w = data.shape[0]
+h = data.shape[1]
 print(data.shape)
 
 input_layer = Input(shape=data.shape)
 conv_layer = input_layer
 for i in range(1, num_conv+1):
-    conv_layer = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="conv"+str(i)) (conv_layer)
+    conv_layer = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="lc"+str(i)) (conv_layer)
     
 #flatten_layer = Flatten(name = "flat")(conv_layer)
 flatten_layer = conv_layer
 
 model = Model(inputs=input_layer, outputs=flatten_layer)
-model.save_weights("w.h5")
+#model.save_weights("w.h5")
+# w_values = numpy.array(model.get_weights())
+# print(w_values[0])
+# print("LOAD W")
+
+w_filename = "../../../disp_nn/weights/fw-s-576000-100000-50e.h5"
+model.load_weights(w_filename, by_name = True)
+w_values = numpy.array(model.get_weights())
+
 model_json = model.to_json()
 with open("model.json", "w") as json_file:
     json_file.write(model_json)
 
+
+left_f = lambda x: (x - data.mean())/data.std()
+norm_left = left_f(data)
+l_prediction = model.predict([[norm_left]])
+l_prediction = l_prediction[0]
+print(l_prediction.shape)
+
+#print(l_prediction[0][0])
 
 # parameter ==========================
 wkdir = './'
@@ -90,10 +110,20 @@ with tf.Session() as sess:
     # for op in sess.graph.get_operations():
     #   print(op)
     # # inference by the model (op name must comes with :0 to specify the index of its output)
-    # tensor_output = sess.graph.get_tensor_by_name('import/dense_3/Sigmoid:0')
-    # tensor_input = sess.graph.get_tensor_by_name('import/dense_1_input:0')
-    # predictions = sess.run(tensor_output, {tensor_input: x})
+    tensor_output = sess.graph.get_tensor_by_name('import/lc4/Relu:0')
+    tensor_input = sess.graph.get_tensor_by_name('import/input_1:0')
+    predictions = sess.run(tensor_output, {tensor_input: [norm_left]})
+
+    print(predictions.shape)
     # print('\n===== output predicted results =====\n')
+
+    predictions = predictions[0]
+    print(predictions[0][0])
+
+    if(numpy.array_equal(l_prediction, predictions)):
+        print("EQUAL!")
+    else:
+        print("NOT EQUAL!")
 
 
 

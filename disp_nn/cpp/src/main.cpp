@@ -42,14 +42,14 @@ int main() {
 
     const int W = 497;
     const int H = 741;
-    Tensor inputTensor1 (DT_FLOAT, TensorShape({W, H}));
+    Tensor inputTensor1 (DT_FLOAT, TensorShape({1, W, H, 1}));
 
     //заполнение тензоров-входных данных
-    for (int i = 0; i < W; i++) {
+    /*for (int i = 0; i < W; i++) {
         for (int j = 0; j < H; j++) {
-	        inputTensor1.matrix<float>()(i, j) = 5;
+	        inputTensor1.matrix<float>()(i, j, 1) = 5;
 	    }
-    }
+    }*/
 	
     std::vector<std::pair<string, tensorflow::Tensor>> inputs = {
         { "input_1", inputTensor1 }

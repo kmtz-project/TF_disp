@@ -22,24 +22,12 @@ input_layer = Input(shape=data.shape)
 conv_layer = input_layer
 for i in range(1, num_conv+1):
     conv_layer = Conv2D(conv_feature_maps, kernel_size=3, activation="relu", name="lc"+str(i)) (conv_layer)
-    
-#flatten_layer = Flatten(name = "flat")(conv_layer)
 flatten_layer = conv_layer
 
 model = Model(inputs=input_layer, outputs=flatten_layer)
-#model.save_weights("w.h5")
-# w_values = numpy.array(model.get_weights())
-# print(w_values[0])
-# print("LOAD W")
 
 w_filename = "../../../disp_nn/weights/fw-s-576000-100000-50e.h5"
 model.load_weights(w_filename, by_name = True)
-w_values = numpy.array(model.get_weights())
-
-model_json = model.to_json()
-with open("model.json", "w") as json_file:
-    json_file.write(model_json)
-
 
 left_f = lambda x: (x - data.mean())/data.std()
 norm_left = left_f(data)
@@ -47,11 +35,9 @@ l_prediction = model.predict([[norm_left]])
 l_prediction = l_prediction[0]
 print(l_prediction.shape)
 
-#print(l_prediction[0][0])
-
 # parameter ==========================
 wkdir = './'
-pb_filename = 'model.pb'
+pb_filename = 'model_l.pb'
 
 # save model to pb ====================
 def freeze_session(session, keep_var_names=None, output_names=None, clear_devices=True):

@@ -10,99 +10,116 @@ using namespace tensorflow::ops;
 using namespace cv;
 using namespace std;
 
-int main() {
-
-    /* Scope root = Scope::NewRootScope();
-
-    auto A = Const(root, {{1.f, 2.f}, {3.f, 4.f}});
-    auto b = Const(root, {{5.f, 6.f}});
-    auto x = MatMul(root.WithOpName("v"), A, b, MatMul::TransposeB(true));
-    std::vector<Tensor> outputs;
-
-    std::unique_ptr<ClientSession> session = std::make_unique<ClientSession>(root);
-    TF_CHECK_OK(session->Run({x}, &outputs));
-    std::cout << outputs[0].matrix<float>();*/
-
-    Mat image;
-
-    image = imread("../im0.png", IMREAD_GRAYSCALE);
-
-    if(image.empty())
-    {
-        std::cout << "Could not open image" << std::endl;
-        return -1;
-    }
-    
-    tensorflow::GraphDef graph_def;
-    tensorflow::Session* session;
-	
-    Status status = NewSession(SessionOptions(), &session);
+int loadModel(string model_name, Session ** session)
+{
+    GraphDef graph;
+   
+    Status status = NewSession(SessionOptions(), session);
     if (!status.ok()) {
         std::cerr << "tf error 1: " << status.ToString() << "\n";
+        return -1;
     }
 
     // Читаем граф
-    status = ReadBinaryProto(Env::Default(), "../model_l.pb", &graph_def);
+    status = ReadBinaryProto(Env::Default(), model_name, &graph);
     if (!status.ok()) {
         std::cerr << "tf error 2: " << status.ToString() << "\n";
+        return -1;
     }
 
     // Добавляем граф в сессию TensorFlow
-    status = session->Create(graph_def);
+    status = (*session)->Create(graph);
     if (!status.ok()) {
         std::cerr << "tf error 3: " << status.ToString() << "\n";
+        return -1;
     }
+    return 0;
+}
 
-    const int W = image.rows;
-    const int H = image.cols;
-    Tensor inputTensor1 (DT_FLOAT, TensorShape({1, W, H, 1}));
-
-    // copy OpenCV Mat to Tensor
-    float * ptr = inputTensor1.flat<float>().data();
-    Mat tensor_image(W, H, CV_32F, ptr);
-    Mat image_f(W, H, CV_32FC1);
-    image.convertTo(image_f, CV_32F);
-    image_f.copyTo(tensor_image); 
-   
-    cout << tensor_image.type() << endl;
-    std::cout << "H: " << image.rows << endl;
-    std::cout << "W: " << image.cols << endl;
-    for(int i = 0; i < 10; i++)
+int loadImage(string img_name, Mat * img)
+{   
+    *img = imread(img_name, IMREAD_GRAYSCALE);
+    if(img->empty())
     {
-        std::cout << (int)image_f.at<float>(0, i) << std::endl;
+        cout << "Could not open image" << endl;
+        return -1;
+    }
+    return 0;
+}
+
+void copyMatToTensor(Mat *mat, Tensor *tensor)
+{
+    float * ptr = tensor->flat<float>().data();
+    const int W = tensor->shape().dim_size(1);
+    const int H = tensor->shape().dim_size(2);
+
+    Mat tensor_mat(W, H, CV_32F, ptr);
+    Mat mat_f(W, H, CV_32F);
+    mat->convertTo(mat_f, CV_32F);
+    mat_f.copyTo(tensor_mat); 
+}
+
+void copyTensorToMat(Tensor *tensor, Mat *mat)
+{
+    float *ptr = tensor->flat<float>().data();
+    const int W = tensor->shape().dim_size(1);
+    const int H = tensor->shape().dim_size(2);
+    const int D = tensor->shape().dim_size(3);
+    int dims[3] = {W, H, D};
+    
+    *mat = Mat(3, dims, CV_32F, ptr);
+}
+
+int main() {
+
+    Mat img_l;
+    Mat img_r;
+
+    loadImage("../im0.png", &img_l);
+    loadImage("../im1.png", &img_r);
+  
+    tensorflow::Session* model_l;
+    tensorflow::Session* model_r;
+
+    loadModel("../model_l.pb", &model_l);
+    loadModel("../model_r.pb", &model_r);
+
+    const int W = img_l.rows;
+    const int H = img_l.cols;
+    Tensor itensor_l (DT_FLOAT, TensorShape({1, W, H, 1}));
+    Tensor itensor_r (DT_FLOAT, TensorShape({1, W, H, 1}));
+
+    copyMatToTensor(&img_l, &itensor_l);
+    copyMatToTensor(&img_r, &itensor_r);
+
+    std::vector<std::pair<string, tensorflow::Tensor>> inputs_l = {
+        { "input_1", itensor_l }};
+    std::vector<tensorflow::Tensor> otensor_l;
+    
+    std::vector<std::pair<string, tensorflow::Tensor>> inputs_r = {
+        { "input_1", itensor_r }};
+    std::vector<tensorflow::Tensor> otensor_r;
+
+    // run models
+    model_l->Run(inputs_l, {"lc4/Relu"}, {}, &otensor_l);
+    model_r->Run(inputs_r, {"rc4/Relu"}, {}, &otensor_r);  
+
+    //доступ к тензорам-результатам
+    Tensor out_l = otensor_l[0];
+    Tensor out_r = otensor_r[0];
+    Mat mout_l, mout_r;
+ 
+    copyTensorToMat(&out_l, &mout_l);
+    copyTensorToMat(&out_r, &mout_r);
+    
+    for(int i = 0; i < 112; i++)
+    {
+        cout << mout_l.at<float>(0, 0, i) << endl;
     }
 
     cout << "---" << endl;
-    //заполнение тензоров-входных данных
-    /*for (int i = 0; i < W; i++) {
-        for (int j = 0; j < H; j++) {
-	        //inputTensor1.matrix<float>()(0, i, j, 0) = image.at<uint8>(i, j);
-                inputTensor1(0, i, j, 0) = image.at<uint8>(i, j);
-	    }
-    }*/
-	
-    std::vector<std::pair<string, tensorflow::Tensor>> inputs = {
-        { "input_1", inputTensor1 }
-    };
-    //здесь мы увидим тензоры - результаты операций
-    std::vector<tensorflow::Tensor> outputTensors;
-    //операции возвращающие значения и не возвращающие передаются в разных параметрах
-    status = session->Run(inputs, {"lc4/Relu"}, {}, &outputTensors);
-    
-    if (!status.ok()) {
-        std::cerr << "tf error 4: " << status.ToString() << "\n";
-	return 0;
-    }
-    
-    //доступ к тензорам-результатам
-    Tensor outputs = outputTensors[0];
-    cout << outputs.shape() << endl;
-    float *pout = outputs.flat<float>().data();
-    int dims[3] = {W-8, H-8, 112};
-    Mat tout(3, dims, CV_32F, pout);
     for (int i = 0; i < 112; i++) {
-        //outputs [0].matrix<float>()(0, i++);
-        cout << tout.at<float>(0,0,i) << endl;
+        cout << mout_r.at<float>(0,0,i) << endl;
     }
 
     return 0;

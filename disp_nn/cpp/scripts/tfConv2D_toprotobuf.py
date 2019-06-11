@@ -38,7 +38,7 @@ print(l_prediction.shape)
 
 # parameter ==========================
 wkdir = './'
-pb_filename = 'model_l.pb'
+pb_filename = 'model_r.pb'
 
 # save model to pb ====================
 def freeze_session(session, keep_var_names=None, output_names=None, clear_devices=True):

@@ -30,7 +30,8 @@ w_filename = "../../../disp_nn/weights/fw-s-576000-100000-50e.h5"
 model.load_weights(w_filename, by_name = True)
 
 left_f = lambda x: (x - data.mean())/data.std()
-norm_left = left_f(data)
+#norm_left = left_f(data)
+norm_left = data
 l_prediction = model.predict([[norm_left]])
 l_prediction = l_prediction[0]
 print(l_prediction.shape)

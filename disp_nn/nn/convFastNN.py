@@ -122,16 +122,20 @@ class ConvFastNN:
 
         disp_pix = numpy.zeros((height,width))
         timestamp = time.time()
-        cosine_arr =  numpy.einsum('ijk,ijk->ij', self.conv_left_patches[::, max_disp:width,::], self.conv_right_patches[::,0:width-max_disp,::]) / (
-                numpy.linalg.norm(self.conv_left_patches[::, max_disp:width,::], axis=-1) * numpy.linalg.norm(self.conv_right_patches[::,0:width-max_disp,::], axis=-1))
-        cosine_arr = numpy.expand_dims(cosine_arr, axis=2)
-        print(cosine_arr.shape)
-        for i in range(1, max_disp):
-            cosine =  numpy.einsum('ijk,ijk->ij', self.conv_left_patches[::, max_disp:width,::], self.conv_right_patches[::,i:width-max_disp+i,::]) / (
-                numpy.linalg.norm(self.conv_left_patches[::, max_disp:width,::], axis=-1) * numpy.linalg.norm(self.conv_right_patches[::,i:width-max_disp+i,::], axis=-1))
+ 
+        cosine_arr = None
+        for i in range(0, max_disp):
+            cosine =  numpy.einsum('ijk,ijk->ij', self.conv_left_patches[:, max_disp:width], self.conv_right_patches[:,i:width-max_disp+i]) / (
+                numpy.linalg.norm(self.conv_left_patches[:, max_disp:width], axis=-1) * 
+                numpy.linalg.norm(self.conv_right_patches[:,i:width-max_disp+i], axis=-1))
             cosine = numpy.expand_dims(cosine, axis=2)
-            cosine_arr = numpy.concatenate((cosine_arr, cosine), axis=2)
+            if(i == 0):
+                cosine_arr = cosine
+            else:
+                cosine_arr = numpy.concatenate((cosine_arr, cosine), axis=2)
             print("\rtime ", "%.2f" % (time.time()-timestamp), " progress ", "%.2f" % (100*(i+1)/max_disp), "%", end = "\r")
+        
+        print("Cosine arr shape = ", cosine_arr.shape)
         cosine_arr[numpy.isnan(cosine_arr)] = 0
         print("\rtime ", "%.2f" % (time.time()-timestamp), " progress ", "%.2f" % 100, "%", end = "\r")
         numpy.save(predictions_filename, cosine_arr)

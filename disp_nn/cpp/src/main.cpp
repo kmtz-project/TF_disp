@@ -47,14 +47,56 @@ int loadImage(string img_name, Mat * img)
     return 0;
 }
 
+float computeMatMean(Mat * mat)
+{
+    const int ROWS = mat->rows;
+    const int COLS = mat->cols;
+    const float NUM_EL = ROWS*COLS;
+
+    float sum = 0;
+
+    Mat mat_f;
+    mat->convertTo(mat_f, CV_32F);
+
+    for(int row = 0; row < ROWS; row++)
+    {
+        for(int col = 0; col < COLS; col++)
+        {   
+            sum += mat_f.at<float>(row,col);
+        }
+    }
+
+    return sum/NUM_EL;
+
+}
+
+float computeMatStd(Mat * mat)
+{
+    const int ROWS = mat->rows;
+    const int COLS = mat->cols;
+    float     mean = computeMatMean(mat);
+
+    Mat mat_diff = Mat(ROWS, COLS, CV_32F);
+    Mat mat_sq_diff = Mat(ROWS, COLS, CV_32F);
+    
+    mat->convertTo(mat_diff, CV_32F);
+    mat_diff -= mean;
+    pow(mat_diff, 2, mat_sq_diff);
+
+    float mean_sq = computeMatMean(&mat_sq_diff);
+
+    return pow(mean_sq, 0.5);
+}
+
+
 void copyMatToTensor(Mat *mat, Tensor *tensor)
 {
     float * ptr = tensor->flat<float>().data();
-    const int W = tensor->shape().dim_size(1);
-    const int H = tensor->shape().dim_size(2);
+    const int H = tensor->shape().dim_size(1);
+    const int W = tensor->shape().dim_size(2);
 
-    Mat tensor_mat(W, H, CV_32F, ptr);
-    Mat mat_f(W, H, CV_32F);
+    Mat tensor_mat(H, W, CV_32F, ptr);
+    Mat mat_f(H, W, CV_32F);
     mat->convertTo(mat_f, CV_32F);
     mat_f.copyTo(tensor_mat); 
 }
@@ -62,10 +104,10 @@ void copyMatToTensor(Mat *mat, Tensor *tensor)
 void copyTensorToMat(Tensor *tensor, Mat *mat)
 {
     float *ptr = tensor->flat<float>().data();
-    const int W = tensor->shape().dim_size(1);
-    const int H = tensor->shape().dim_size(2);
+    const int H = tensor->shape().dim_size(1);
+    const int W = tensor->shape().dim_size(2);
     const int D = tensor->shape().dim_size(3);
-    int dims[3] = {W, H, D};
+    int dims[3] = {H, W, D};
     
     *mat = Mat(3, dims, CV_32F, ptr);
 }
@@ -84,13 +126,27 @@ int main() {
     loadModel("../model_l.pb", &model_l);
     loadModel("../model_r.pb", &model_r);
 
-    const int W = img_l.rows;
-    const int H = img_l.cols;
-    Tensor itensor_l (DT_FLOAT, TensorShape({1, W, H, 1}));
-    Tensor itensor_r (DT_FLOAT, TensorShape({1, W, H, 1}));
+    const int H = img_l.rows;
+    const int W = img_l.cols;
+    Tensor itensor_l (DT_FLOAT, TensorShape({1, H, W, 1}));
+    Tensor itensor_r (DT_FLOAT, TensorShape({1, H, W, 1}));
 
-    copyMatToTensor(&img_l, &itensor_l);
-    copyMatToTensor(&img_r, &itensor_r);
+    float img_l_mean = computeMatMean(&img_l);
+    float img_l_std  = computeMatStd(&img_l);
+    float img_r_mean = computeMatMean(&img_r);
+    float img_r_std  = computeMatStd(&img_r);
+
+    Mat img_l_norm = Mat(W, H, CV_32F);
+    Mat img_r_norm = Mat(W, H, CV_32F);
+
+    img_l.convertTo(img_l_norm, CV_32F);
+    img_r.convertTo(img_r_norm, CV_32F);
+
+    img_l_norm = (img_l_norm - img_l_mean)/img_l_std;
+    img_r_norm = (img_r_norm - img_r_mean)/img_r_std;
+
+    copyMatToTensor(&img_l_norm, &itensor_l);
+    copyMatToTensor(&img_r_norm, &itensor_r);
 
     std::vector<std::pair<string, tensorflow::Tensor>> inputs_l = {
         { "input_1", itensor_l }};
@@ -102,8 +158,8 @@ int main() {
 
     // run models
     model_l->Run(inputs_l, {"lc4/Relu"}, {}, &otensor_l);
-    model_r->Run(inputs_r, {"rc4/Relu"}, {}, &otensor_r);  
-
+    model_r->Run(inputs_r, {"rc4/Relu"}, {}, &otensor_r);
+    
     //доступ к тензорам-результатам
     Tensor out_l = otensor_l[0];
     Tensor out_r = otensor_r[0];

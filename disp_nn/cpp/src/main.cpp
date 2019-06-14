@@ -131,7 +131,7 @@ Mat computeCosine(Mat * mat_l, Mat * mat_r, int max_disp)
         cout << "\rCompute cosine..." << (int)(disp_idx/(float)max_disp*100) << "%" << flush;
         for(int h = 0; h < H; h++)
         {
-            for(int w = max_disp; w < W; w++)
+            for(int w = max_disp; w < W+max_disp; w++)
             {
                 float a = 0;
                 float b = 0;
@@ -177,7 +177,8 @@ Mat computeSGBM(Mat * predict, int cross_size)
     Mat disp_img = Mat::ones(n, m, CV_8U);
 
     std::vector<float> cost_row(max_disp, 0);
-    cout << "M = " << m << endl;
+    
+    int max_j = 0;
     for (int i = 0; i < n; i++) 
     {
 	for (int j = max_disp; j < m; j++)
@@ -220,7 +221,7 @@ Mat computeSGBM(Mat * predict, int cross_size)
 	    //int i_min = std::max_element(cost_row.begin(), cost_row.end()) - cost_row.begin();
 
 	    disp_img.at<uint8>(i, j) = i_min;
-			
+	    max_j = j;	
 	}
 		
         cout << "\r[i] = [" << i << "/" << n << "]" << flush;
@@ -312,7 +313,7 @@ int main() {
         if(isnan(x)) cout << "NAN!!!" << endl;
     }*/
 
-    Mat disp_img = computeSGBM(&predict, 30);
+    Mat disp_img = computeSGBM(&predict, 15);
     //norm result
     disp_img = 255*(max_disp - disp_img)/max_disp;
     imwrite("out.png", disp_img);

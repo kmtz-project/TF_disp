@@ -112,6 +112,56 @@ void copyTensorToMat(Tensor *tensor, Mat *mat)
     *mat = Mat(3, dims, CV_32F, ptr);
 }
 
+void computeCosine(Mat * mat_l, Mat * mat_r, int max_disp)
+{
+
+    const int H = mat_l->size[0];
+    const int W = mat_l->size[1] - max_disp;
+    const int NUM_FILT = mat_l->size[2];
+
+    cout << "H        = " << H << endl;
+    cout << "W        = " << W << endl;
+    cout << "NUM_FILT = " << NUM_FILT << endl;
+
+    int dims[3] = {H, W, max_disp};
+    Mat predict = Mat(3, dims, CV_32F);
+
+    for(int disp_idx = 0; disp_idx < max_disp; disp_idx++)
+    {
+        cout << "\rCompute cosine..." << (int)(disp_idx/(float)max_disp*100) << "%" << flush;
+        for(int h = 0; h < H; h++)
+        {
+            for(int w = max_disp; w < W; w++)
+            {
+                float a = 0;
+                float b = 0;
+                float c = 0;
+                for(int filt_idx = 0; filt_idx < NUM_FILT; filt_idx++)
+                {
+                    float fv_l = mat_l->at<float>(h, w, filt_idx);
+                    float fv_r = mat_r->at<float>(h, w - max_disp + disp_idx, filt_idx);
+
+                    a += fv_l * fv_r;
+                    b += fv_l * fv_l;
+                    c += fv_r * fv_r;
+
+                }
+
+                predict.at<float>(h, w - max_disp, disp_idx) = a / pow(b * c, 0.5);
+            }
+        }
+    }
+
+    cout << "\rCompute cosine... Done!" << endl;
+
+    cout << "Predict" << endl;
+    cout << "---"     << endl;
+    for(int i = 0; i < max_disp; i++)
+    {
+        cout << predict.at<float>(0, 0, i) << endl;
+    }
+}
+
 int main() {
 
     Mat img_l;
@@ -168,7 +218,9 @@ int main() {
     copyTensorToMat(&out_l, &mout_l);
     copyTensorToMat(&out_r, &mout_r);
     
-    for(int i = 0; i < 112; i++)
+    computeCosine(&mout_l, &mout_r, 70);
+
+    /*for(int i = 0; i < 112; i++)
     {
         cout << mout_l.at<float>(0, 0, i) << endl;
     }
@@ -176,7 +228,7 @@ int main() {
     cout << "---" << endl;
     for (int i = 0; i < 112; i++) {
         cout << mout_r.at<float>(0,0,i) << endl;
-    }
+    }*/
 
     return 0;
 }

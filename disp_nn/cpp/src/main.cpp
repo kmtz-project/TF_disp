@@ -112,7 +112,7 @@ void copyTensorToMat(Tensor *tensor, Mat *mat)
     *mat = Mat(3, dims, CV_32F, ptr);
 }
 
-void computeCosine(Mat * mat_l, Mat * mat_r, int max_disp)
+Mat computeCosine(Mat * mat_l, Mat * mat_r, int max_disp)
 {
 
     const int H = mat_l->size[0];
@@ -154,12 +154,81 @@ void computeCosine(Mat * mat_l, Mat * mat_r, int max_disp)
 
     cout << "\rCompute cosine... Done!" << endl;
 
-    cout << "Predict" << endl;
-    cout << "---"     << endl;
-    for(int i = 0; i < max_disp; i++)
+    return predict;
+
+}
+
+float toMatchingCost(float prediction)
+{
+
+    if(isnan(prediction))
+        return 1;
+
+    return 1-prediction;
+}
+
+Mat computeSGBM(Mat * predict, int cross_size)
+{
+    const int max_disp = predict->size[2];
+    const int n        = predict->size[0];
+    const int m        = predict->size[1] + max_disp;
+    const int p_column = predict->size[1];
+	
+    Mat disp_img = Mat::ones(n, m, CV_8U);
+
+    std::vector<float> cost_row(max_disp, 0);
+    cout << "M = " << m << endl;
+    for (int i = 0; i < n; i++) 
     {
-        cout << predict.at<float>(0, 0, i) << endl;
+	for (int j = max_disp; j < m; j++)
+	{
+	    for (int d = 0; d < max_disp; d++)
+	    {
+	        float cost_h  = 0;
+	        float cost_v  = 0;
+	        float cost_rd = 0;
+	        float cost_ld = 0;
+	        int v_ptr     = 0;
+	        int h_ptr     = 0;
+	        int ld_ptr_y  = 0;
+
+	        for (int r = 0; r < cross_size; r++)
+	        {
+		    h_ptr = j - max_disp - cross_size / 2 + r;
+		    v_ptr = i - cross_size / 2 + r;
+
+		    ld_ptr_y = j - max_disp + (cross_size/2 - r);
+
+		    if (h_ptr < 0) h_ptr = 0;
+		    if (h_ptr >= m - max_disp) h_ptr = m - max_disp - 1;
+		    if (v_ptr < 0) v_ptr = 0;
+		    if (v_ptr >= n) v_ptr = n - 1;
+		    if (ld_ptr_y < 0) ld_ptr_y = 0;
+		    if (ld_ptr_y >= m - max_disp) ld_ptr_y = m - max_disp - 1;
+
+		    cost_h  += toMatchingCost(predict->at<float>(i, h_ptr, d));
+		    cost_v  += toMatchingCost(predict->at<float>(v_ptr, j - max_disp, d));
+		    cost_rd += toMatchingCost(predict->at<float>(v_ptr, h_ptr, d));
+		    cost_ld += toMatchingCost(predict->at<float>(v_ptr, ld_ptr_y, d));
+		}
+
+		cost_row[d] = (cost_h + cost_v + cost_rd + cost_ld)/4;
+                //cost_row[d] = predict->at<float>(i, j - max_disp, d);
+	    }
+
+	    int i_min = std::min_element(cost_row.begin(), cost_row.end()) - cost_row.begin();
+	    //int i_min = std::max_element(cost_row.begin(), cost_row.end()) - cost_row.begin();
+
+	    disp_img.at<uint8>(i, j) = i_min;
+			
+	}
+		
+        cout << "\r[i] = [" << i << "/" << n << "]" << flush;
     }
+
+    cout << endl;
+
+    return disp_img;
 }
 
 int main() {
@@ -218,8 +287,6 @@ int main() {
     copyTensorToMat(&out_l, &mout_l);
     copyTensorToMat(&out_r, &mout_r);
     
-    computeCosine(&mout_l, &mout_r, 70);
-
     /*for(int i = 0; i < 112; i++)
     {
         cout << mout_l.at<float>(0, 0, i) << endl;
@@ -229,6 +296,26 @@ int main() {
     for (int i = 0; i < 112; i++) {
         cout << mout_r.at<float>(0,0,i) << endl;
     }*/
+
+    int max_disp = 70;
+    Mat predict = computeCosine(&mout_l, &mout_r, max_disp);
+
+    //cout << "MAX = " << *(max_element(predict.begin<float>(),predict.end<float>())) << endl;
+    //cout << "MIN = " << *(min_element(predict.begin<float>(),predict.end<float>())) << endl;
+
+    /*cout << "Predict" << endl;
+    cout << "---"     << endl;
+    for(int i = 0; i < max_disp; i++)
+    {
+        float x = predict.at<float>(34, 268, i);
+        cout << x << endl;
+        if(isnan(x)) cout << "NAN!!!" << endl;
+    }*/
+
+    Mat disp_img = computeSGBM(&predict, 30);
+    //norm result
+    disp_img = 255*(max_disp - disp_img)/max_disp;
+    imwrite("out.png", disp_img);
 
     return 0;
 }

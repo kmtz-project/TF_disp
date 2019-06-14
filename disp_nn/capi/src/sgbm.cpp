@@ -55,7 +55,7 @@ np::ndarray compute(np::ndarray data, int cross_size, float P)
 					h_ptr = j - max_disp - cross_size / 2 + r;
 					v_ptr = i - cross_size / 2 + r;
 
-					ld_ptr_y = j - max_disp + (cross_size - h_ptr);
+					ld_ptr_y = j - max_disp + (cross_size/2 - r);
 
 					if (h_ptr < 0) h_ptr = 0;
 					if (h_ptr >= m - max_disp) h_ptr = m - max_disp - 1;

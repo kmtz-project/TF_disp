@@ -4,11 +4,25 @@
 #include "tensorflow/cc/ops/standard_ops.h"
 #include "tensorflow/core/public/session.h"
 #include <opencv2/opencv.hpp>
+#include "boost/date_time/posix_time/posix_time.hpp"
+#include "termcolor.hpp"
 
 using namespace tensorflow;
 using namespace tensorflow::ops;
 using namespace cv;
 using namespace std;
+using namespace boost::posix_time;
+
+ptime getTimeUS()
+{
+    return microsec_clock::local_time();
+}
+
+float calcTimeDiffMS(ptime start_time)
+{
+    time_duration diff = getTimeUS() - start_time;
+    return float(diff.total_microseconds())/1000.0;
+}
 
 int loadModel(string model_name, Session ** session)
 {
@@ -234,6 +248,9 @@ Mat computeSGBM(Mat * predict, int cross_size)
 
 int main() {
 
+    ptime start_time;
+    float exec_time;
+
     Mat img_l;
     Mat img_r;
 
@@ -277,8 +294,14 @@ int main() {
     std::vector<tensorflow::Tensor> otensor_r;
 
     // run models
+    start_time = getTimeUS();
     model_l->Run(inputs_l, {"lc4/Relu"}, {}, &otensor_l);
     model_r->Run(inputs_r, {"rc4/Relu"}, {}, &otensor_r);
+    exec_time = calcTimeDiffMS(start_time);
+
+    cout << termcolor::green << 
+        "Time (calc Conv layers): " << exec_time/1000 << " sec" <<
+        termcolor::reset << endl;
     
     //доступ к тензорам-результатам
     Tensor out_l = otensor_l[0];
@@ -299,10 +322,14 @@ int main() {
     }*/
 
     int max_disp = 70;
-    Mat predict = computeCosine(&mout_l, &mout_r, max_disp);
 
-    //cout << "MAX = " << *(max_element(predict.begin<float>(),predict.end<float>())) << endl;
-    //cout << "MIN = " << *(min_element(predict.begin<float>(),predict.end<float>())) << endl;
+    start_time  = getTimeUS();
+    Mat predict = computeCosine(&mout_l, &mout_r, max_disp);
+    exec_time   = calcTimeDiffMS(start_time);
+
+    cout << termcolor::green << 
+        "Time (computeCosine): " << exec_time/1000 << " sec" <<
+        termcolor::reset << endl;
 
     /*cout << "Predict" << endl;
     cout << "---"     << endl;
@@ -313,7 +340,14 @@ int main() {
         if(isnan(x)) cout << "NAN!!!" << endl;
     }*/
 
+    start_time   = getTimeUS();
     Mat disp_img = computeSGBM(&predict, 15);
+    exec_time    = calcTimeDiffMS(start_time); 
+
+    cout << termcolor::green << 
+        "Time (computeSGBM): " << exec_time/1000 << " sec" <<
+        termcolor::reset << endl;
+
     //norm result
     disp_img = 255*(max_disp - disp_img)/max_disp;
     imwrite("out.png", disp_img);

@@ -126,6 +126,11 @@ void copyTensorToMat(Tensor *tensor, Mat *mat)
     *mat = Mat(3, dims, CV_32F, ptr);
 }
 
+float getElement(float * mas, int i, int j, int k, int j_max, int k_max)
+{
+    return mas[i*j_max*k_max + j*k_max + k];
+}
+
 Mat computeCosine(Mat * mat_l, Mat * mat_r, int max_disp)
 {
 
@@ -140,6 +145,10 @@ Mat computeCosine(Mat * mat_l, Mat * mat_r, int max_disp)
     int dims[3] = {H, W, max_disp};
     Mat predict = Mat(3, dims, CV_32F);
 
+    float * mat_l_ptr = mat_l->ptr<float>();
+    float * mat_r_ptr = mat_r->ptr<float>();
+    float * predict_ptr = predict.ptr<float>();
+
     for(int disp_idx = 0; disp_idx < max_disp; disp_idx++)
     {
         cout << "\rCompute cosine..." << (int)(disp_idx/(float)max_disp*100) << "%" << flush;
@@ -152,8 +161,8 @@ Mat computeCosine(Mat * mat_l, Mat * mat_r, int max_disp)
                 float c = 0;
                 for(int filt_idx = 0; filt_idx < NUM_FILT; filt_idx++)
                 {
-                    float fv_l = mat_l->at<float>(h, w, filt_idx);
-                    float fv_r = mat_r->at<float>(h, w - max_disp + disp_idx, filt_idx);
+                    float fv_l = getElement(mat_l_ptr, h, w, filt_idx, W + max_disp, NUM_FILT);
+                    float fv_r = getElement(mat_r_ptr, h, w - max_disp + disp_idx, filt_idx, W + max_disp, NUM_FILT);
 
                     a += fv_l * fv_r;
                     b += fv_l * fv_l;
@@ -161,7 +170,7 @@ Mat computeCosine(Mat * mat_l, Mat * mat_r, int max_disp)
 
                 }
 
-                predict.at<float>(h, w - max_disp, disp_idx) = a / pow(b * c, 0.5);
+                predict_ptr[h*W*max_disp + (w - max_disp)*max_disp + disp_idx] = a / pow(b * c, 0.5);
             }
         }
     }
@@ -181,6 +190,7 @@ float toMatchingCost(float prediction)
     return 1-prediction;
 }
 
+
 Mat computeSGBM(Mat * predict, int cross_size)
 {
     const int max_disp = predict->size[2];
@@ -191,6 +201,7 @@ Mat computeSGBM(Mat * predict, int cross_size)
     Mat disp_img = Mat::ones(n, m, CV_8U);
 
     std::vector<float> cost_row(max_disp, 0);
+    float * predict_ptr = predict->ptr<float>();
     
     int max_j = 0;
     for (int i = 0; i < n; i++) 
@@ -221,10 +232,11 @@ Mat computeSGBM(Mat * predict, int cross_size)
 		    if (ld_ptr_y < 0) ld_ptr_y = 0;
 		    if (ld_ptr_y >= m - max_disp) ld_ptr_y = m - max_disp - 1;
 
-		    cost_h  += toMatchingCost(predict->at<float>(i, h_ptr, d));
-		    cost_v  += toMatchingCost(predict->at<float>(v_ptr, j - max_disp, d));
-		    cost_rd += toMatchingCost(predict->at<float>(v_ptr, h_ptr, d));
-		    cost_ld += toMatchingCost(predict->at<float>(v_ptr, ld_ptr_y, d));
+		    cost_h  += toMatchingCost(getElement(predict_ptr, i, h_ptr, d, m - max_disp, max_disp));
+		    cost_v  += toMatchingCost(getElement(predict_ptr, v_ptr, j - max_disp, d, m - max_disp, max_disp));
+		    cost_rd += toMatchingCost(getElement(predict_ptr, v_ptr, h_ptr, d, m - max_disp, max_disp));
+		    cost_ld += toMatchingCost(getElement(predict_ptr, v_ptr, ld_ptr_y, d, m - max_disp, max_disp));
+
 		}
 
 		cost_row[d] = (cost_h + cost_v + cost_rd + cost_ld)/4;

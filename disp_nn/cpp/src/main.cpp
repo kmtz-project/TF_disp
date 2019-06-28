@@ -266,14 +266,14 @@ int main() {
     Mat img_l;
     Mat img_r;
 
-    loadImage("../im0.png", &img_l);
-    loadImage("../im1.png", &img_r);
+    loadImage("../../../../samples/Middlebury_scenes_2014/trainingQ/Motorcycle/im0.png", &img_l);
+    loadImage("../../../../samples/Middlebury_scenes_2014/trainingQ/Motorcycle/im1.png", &img_r);
   
     tensorflow::Session* model_l;
     tensorflow::Session* model_r;
 
-    loadModel("../model_l.pb", &model_l);
-    loadModel("../model_r.pb", &model_r);
+    loadModel("../../models/model_l.pb", &model_l);
+    loadModel("../../models/model_r.pb", &model_r);
 
     const int H = img_l.rows;
     const int W = img_l.cols;

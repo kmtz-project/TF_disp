@@ -76,7 +76,7 @@ np::ndarray compute(np::ndarray data, int cross_size, float P)
 					cost_ld += row_ld[d];
 				}
 
-				cost_row[d] = (cost_h + cost_v + (cost_rd + cost_ld)/3)/4;
+				cost_row[d] = (cost_h + cost_v + (cost_rd + cost_ld))/4;
 			}
 
 			int i_min = std::min_element(cost_row.begin(), cost_row.end()) - cost_row.begin();

@@ -229,8 +229,73 @@ float toMatchingCost(float prediction)
     return 1-prediction;
 }
 
+struct SGBMData {
+    float * predict_ptr;
+    int cross_size;
+    Mat * disp_img_ptr;
+    int max_disp;
+    int m;
+    int n;
+};
 
-Mat computeSGBM(Mat * predict, int cross_size)
+void computeSGBMNDisp(SGBMData * sgbm_data, int start_row, int end_row)
+{
+    float * predict_ptr = sgbm_data->predict_ptr;
+    int max_disp        = sgbm_data->max_disp;
+    int m               = sgbm_data->m;
+    int n               = sgbm_data->n;
+    int cross_size      = sgbm_data->cross_size;
+    
+    vector<float> cost_row = vector<float>(max_disp, 0);
+
+    for (int i = start_row; i < end_row; i++) 
+    {
+        for (int j = max_disp; j < m; j++)
+	    {
+            for (int d = 0; d < max_disp; d++)
+            {
+                float cost_h  = 0;
+                float cost_v  = 0;
+                float cost_rd = 0;
+                float cost_ld = 0;
+                int v_ptr     = 0;
+                int h_ptr     = 0;
+                int ld_ptr_y  = 0;
+
+                for (int r = 0; r < cross_size; r++)
+                {
+	                h_ptr = j - max_disp - cross_size / 2 + r;
+	                v_ptr = i - cross_size / 2 + r;
+
+	                ld_ptr_y = j - max_disp + (cross_size/2 - r);
+
+	                if (h_ptr < 0) h_ptr = 0;
+	                if (h_ptr >= m - max_disp) h_ptr = m - max_disp - 1;
+	                if (v_ptr < 0) v_ptr = 0;
+	                if (v_ptr >= n) v_ptr = n - 1;
+	                if (ld_ptr_y < 0) ld_ptr_y = 0;
+	                if (ld_ptr_y >= m - max_disp) ld_ptr_y = m - max_disp - 1;
+
+	                cost_h  += toMatchingCost(getElement(predict_ptr, i, h_ptr, d, m - max_disp, max_disp));
+	                cost_v  += toMatchingCost(getElement(predict_ptr, v_ptr, j - max_disp, d, m - max_disp, max_disp));
+	                cost_rd += toMatchingCost(getElement(predict_ptr, v_ptr, h_ptr, d, m - max_disp, max_disp));
+	                cost_ld += toMatchingCost(getElement(predict_ptr, v_ptr, ld_ptr_y, d, m - max_disp, max_disp));
+
+	            }
+
+                cost_row[d] = (cost_h + cost_v + cost_rd + cost_ld)/4;
+            }
+            
+            int i_min = std::min_element(cost_row.begin(), cost_row.end()) - cost_row.begin();
+
+	        (sgbm_data->disp_img_ptr)->at<uint8>(i, j) = i_min;
+        }
+    }
+        
+}
+
+
+Mat computeSGBM(Mat * predict, int cross_size, int num_threads)
 {
     const int max_disp = predict->size[2];
     const int n        = predict->size[0];
@@ -239,60 +304,26 @@ Mat computeSGBM(Mat * predict, int cross_size)
 	
     Mat disp_img = Mat::ones(n, m, CV_8U);
 
-    std::vector<float> cost_row(max_disp, 0);
-    float * predict_ptr = predict->ptr<float>();
+    SGBMData sgbm_data;
+    sgbm_data.predict_ptr  = predict->ptr<float>();
+    sgbm_data.cross_size   = cross_size;
+    sgbm_data.disp_img_ptr = &disp_img;
+    sgbm_data.max_disp     = max_disp;
+    sgbm_data.m            = m;
+    sgbm_data.n            = n;
+
+ 
+    //computeSGBMNDisp(&sgbm_data, 0, n);
     
-    int max_j = 0;
-    for (int i = 0; i < n; i++) 
+    vector<thread> threads;
+    int nrow_per_thread = ceil(n/num_threads);
+    for(int tn = 0; tn < num_threads; tn++)
     {
-	for (int j = max_disp; j < m; j++)
-	{
-	    for (int d = 0; d < max_disp; d++)
-	    {
-	        float cost_h  = 0;
-	        float cost_v  = 0;
-	        float cost_rd = 0;
-	        float cost_ld = 0;
-	        int v_ptr     = 0;
-	        int h_ptr     = 0;
-	        int ld_ptr_y  = 0;
-
-	        for (int r = 0; r < cross_size; r++)
-	        {
-		    h_ptr = j - max_disp - cross_size / 2 + r;
-		    v_ptr = i - cross_size / 2 + r;
-
-		    ld_ptr_y = j - max_disp + (cross_size/2 - r);
-
-		    if (h_ptr < 0) h_ptr = 0;
-		    if (h_ptr >= m - max_disp) h_ptr = m - max_disp - 1;
-		    if (v_ptr < 0) v_ptr = 0;
-		    if (v_ptr >= n) v_ptr = n - 1;
-		    if (ld_ptr_y < 0) ld_ptr_y = 0;
-		    if (ld_ptr_y >= m - max_disp) ld_ptr_y = m - max_disp - 1;
-
-		    cost_h  += toMatchingCost(getElement(predict_ptr, i, h_ptr, d, m - max_disp, max_disp));
-		    cost_v  += toMatchingCost(getElement(predict_ptr, v_ptr, j - max_disp, d, m - max_disp, max_disp));
-		    cost_rd += toMatchingCost(getElement(predict_ptr, v_ptr, h_ptr, d, m - max_disp, max_disp));
-		    cost_ld += toMatchingCost(getElement(predict_ptr, v_ptr, ld_ptr_y, d, m - max_disp, max_disp));
-
-		}
-
-		cost_row[d] = (cost_h + cost_v + cost_rd + cost_ld)/4;
-                //cost_row[d] = predict->at<float>(i, j - max_disp, d);
-	    }
-
-	    int i_min = std::min_element(cost_row.begin(), cost_row.end()) - cost_row.begin();
-	    //int i_min = std::max_element(cost_row.begin(), cost_row.end()) - cost_row.begin();
-
-	    disp_img.at<uint8>(i, j) = i_min;
-	    max_j = j;	
-	}
-		
-        cout << "\r[i] = [" << i << "/" << n << "]" << flush;
+        int start_row = tn*nrow_per_thread;
+        int end_row   = start_row + nrow_per_thread; 
+        threads.push_back(thread(computeSGBMNDisp, &sgbm_data, start_row, end_row));
     }
-
-    cout << endl;
+    for_each(threads.begin(), threads.end(), mem_fn(&thread::join));
 
     return disp_img;
 }
@@ -350,8 +381,9 @@ int main() {
     model_r->Run(inputs_r, {"rc4/Relu"}, {}, &otensor_r);
     exec_time = calcTimeDiffMS(start_time);
 
+    float conv_time = exec_time/1000;
     cout << termcolor::green << 
-        "Time (calc Conv layers): " << exec_time/1000 << " sec" <<
+        "Time (calc Conv layers): " << conv_time << " sec" <<
         termcolor::reset << endl;
     
     //доступ к тензорам-результатам
@@ -379,8 +411,9 @@ int main() {
     Mat predict = computeCosine(&mout_l, &mout_r, max_disp, num_threads);
     exec_time   = calcTimeDiffMS(start_time);
 
+    float computeCosine_time = exec_time/1000;
     cout << termcolor::green << 
-        "Time (computeCosine): " << exec_time/1000 << " sec" <<
+        "Time (computeCosine): " << computeCosine_time << " sec" <<
         termcolor::reset << endl;
 
     /*cout << "Predict" << endl;
@@ -393,11 +426,17 @@ int main() {
     }*/
 
     start_time   = getTimeUS();
-    Mat disp_img = computeSGBM(&predict, 15);
+    Mat disp_img = computeSGBM(&predict, 15, num_threads);
     exec_time    = calcTimeDiffMS(start_time); 
 
+    float computeSGBM_time = exec_time/1000;
     cout << termcolor::green << 
-        "Time (computeSGBM): " << exec_time/1000 << " sec" <<
+        "Time (computeSGBM): " << computeSGBM_time << " sec" <<
+        termcolor::reset << endl;
+        
+    float total_time = conv_time + computeCosine_time + computeSGBM_time;
+    cout << termcolor::red << 
+        "Total time: " << total_time << " sec" <<
         termcolor::reset << endl;
 
     //norm result

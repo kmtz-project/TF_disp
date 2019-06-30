@@ -6,6 +6,8 @@
 #include <opencv2/opencv.hpp>
 #include "boost/date_time/posix_time/posix_time.hpp"
 #include "termcolor.hpp"
+#include <thread>
+//#include <math>
 
 using namespace tensorflow;
 using namespace tensorflow::ops;
@@ -131,7 +133,51 @@ float getElement(float * mas, int i, int j, int k, int j_max, int k_max)
     return mas[i*j_max*k_max + j*k_max + k];
 }
 
-Mat computeCosine(Mat * mat_l, Mat * mat_r, int max_disp)
+struct CosineData {
+    float * predict_ptr;
+    float * mat_l_ptr;
+    float * mat_r_ptr;
+    int W;
+    int H;
+    int max_disp;
+    int NUM_FILT;
+
+};
+
+void computeCosineNDisp(CosineData * cosine_data, int start_disp, int end_disp)
+{
+
+    int W        = cosine_data->W;
+    int H        = cosine_data->H;
+    int max_disp = cosine_data->max_disp;
+    int NUM_FILT = cosine_data->NUM_FILT;
+
+    for(int disp_idx = start_disp; disp_idx < end_disp; disp_idx++)
+    {
+        for(int h = 0; h < cosine_data->H; h++)
+        {
+            for(int w = max_disp; w < W + max_disp; w++)
+            {
+                float a = 0;
+                float b = 0;
+                float c = 0;
+                for(int filt_idx = 0; filt_idx < NUM_FILT; filt_idx++)
+                {
+                    float fv_l = getElement(cosine_data->mat_l_ptr, h, w, filt_idx, W + max_disp, NUM_FILT);
+                    float fv_r = getElement(cosine_data->mat_r_ptr, h, w - max_disp + disp_idx, filt_idx, W + max_disp, NUM_FILT);
+
+                    a += fv_l * fv_r;
+                    b += fv_l * fv_l;
+                    c += fv_r * fv_r;
+                }
+
+                cosine_data->predict_ptr[h*W*max_disp + (w - max_disp)*max_disp + disp_idx] = a / pow(b * c, 0.5);
+            }
+        }
+    }
+}
+
+Mat computeCosine(Mat * mat_l, Mat * mat_r, int max_disp, int num_threads)
 {
 
     const int H = mat_l->size[0];
@@ -149,31 +195,24 @@ Mat computeCosine(Mat * mat_l, Mat * mat_r, int max_disp)
     float * mat_r_ptr = mat_r->ptr<float>();
     float * predict_ptr = predict.ptr<float>();
 
-    for(int disp_idx = 0; disp_idx < max_disp; disp_idx++)
+    CosineData cosine_data;
+    cosine_data.predict_ptr = predict_ptr;
+    cosine_data.mat_l_ptr   = mat_l_ptr;
+    cosine_data.mat_r_ptr   = mat_r_ptr;
+    cosine_data.W           = W;
+    cosine_data.H           = H;
+    cosine_data.max_disp    = max_disp;
+    cosine_data.NUM_FILT    = NUM_FILT;
+
+    vector<thread> threads;
+    int ndisp_per_thread = ceil(max_disp/num_threads);
+    for(int i = 0; i < num_threads; i++)
     {
-        cout << "\rCompute cosine..." << (int)(disp_idx/(float)max_disp*100) << "%" << flush;
-        for(int h = 0; h < H; h++)
-        {
-            for(int w = max_disp; w < W+max_disp; w++)
-            {
-                float a = 0;
-                float b = 0;
-                float c = 0;
-                for(int filt_idx = 0; filt_idx < NUM_FILT; filt_idx++)
-                {
-                    float fv_l = getElement(mat_l_ptr, h, w, filt_idx, W + max_disp, NUM_FILT);
-                    float fv_r = getElement(mat_r_ptr, h, w - max_disp + disp_idx, filt_idx, W + max_disp, NUM_FILT);
-
-                    a += fv_l * fv_r;
-                    b += fv_l * fv_l;
-                    c += fv_r * fv_r;
-
-                }
-
-                predict_ptr[h*W*max_disp + (w - max_disp)*max_disp + disp_idx] = a / pow(b * c, 0.5);
-            }
-        }
+        int start_disp = i*ndisp_per_thread;
+        int end_disp   = start_disp + ndisp_per_thread; 
+        threads.push_back(thread(computeCosineNDisp, &cosine_data, start_disp, end_disp));
     }
+    for_each(threads.begin(), threads.end(), mem_fn(&thread::join));
 
     cout << "\rCompute cosine... Done!" << endl;
 
@@ -333,10 +372,11 @@ int main() {
         cout << mout_r.at<float>(0,0,i) << endl;
     }*/
 
-    int max_disp = 70;
+    int max_disp    = 70;
+    int num_threads = 6;
 
     start_time  = getTimeUS();
-    Mat predict = computeCosine(&mout_l, &mout_r, max_disp);
+    Mat predict = computeCosine(&mout_l, &mout_r, max_disp, num_threads);
     exec_time   = calcTimeDiffMS(start_time);
 
     cout << termcolor::green << 

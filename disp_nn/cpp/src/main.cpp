@@ -7,7 +7,10 @@
 #include "boost/date_time/posix_time/posix_time.hpp"
 #include "termcolor.hpp"
 #include <thread>
+
+#ifdef __AVX__
 #include <immintrin.h>
+#endif
 
 using namespace tensorflow;
 using namespace tensorflow::ops;
@@ -165,6 +168,8 @@ void computeCosineNDisp(CosineData * cosine_data, int start_disp, int end_disp)
     __m256 mm_l_mas, mm_r_mas;
     __m256 mm_reg1, mm_reg2, mm_reg3, mm_reg4;
     
+    const int NUM_FILT_AVX = 8*(NUM_FILT/8);
+    
     #endif
 
     for(int disp_idx = start_disp; disp_idx < end_disp; disp_idx++)
@@ -178,13 +183,16 @@ void computeCosineNDisp(CosineData * cosine_data, int start_disp, int end_disp)
                 float c = 0;
                 
                 #ifdef __AVX__
-                for(int filt_idx = 0; filt_idx < NUM_FILT; filt_idx += 8)
+                
+                
+                for(int filt_idx = 0; filt_idx < NUM_FILT_AVX; filt_idx += 8)
                 {
+ 
                     fv_l_mas = getElementPtr(cosine_data->mat_l_ptr, h, w, filt_idx, W + max_disp, NUM_FILT);
                     fv_r_mas = getElementPtr(cosine_data->mat_r_ptr, h, w - max_disp + disp_idx, filt_idx, W + max_disp, NUM_FILT);
                     
-                    mm_l_mas = _mm256_load_ps(fv_l_mas);
-                    mm_r_mas = _mm256_load_ps(fv_r_mas);
+                    mm_l_mas = _mm256_loadu_ps(fv_l_mas);
+                    mm_r_mas = _mm256_loadu_ps(fv_r_mas);
                     
                     mm_reg1 = _mm256_mul_ps(mm_l_mas, mm_r_mas);
                     mm_reg2 = _mm256_mul_ps(mm_l_mas, mm_l_mas);
@@ -203,6 +211,17 @@ void computeCosineNDisp(CosineData * cosine_data, int start_disp, int end_disp)
                     c += avx_res_mas[2] + avx_res_mas[3];
                     
                 }
+                
+                for(int filt_idx = NUM_FILT_AVX; filt_idx < NUM_FILT; filt_idx++)
+                {
+                    float fv_l = getElement(cosine_data->mat_l_ptr, h, w, filt_idx, W + max_disp, NUM_FILT);
+                    float fv_r = getElement(cosine_data->mat_r_ptr, h, w - max_disp + disp_idx, filt_idx, W + max_disp, NUM_FILT);
+
+                    a += fv_l * fv_r;
+                    b += fv_l * fv_l;
+                    c += fv_r * fv_r;
+                }
+                
                 #else
                 for(int filt_idx = 0; filt_idx < NUM_FILT; filt_idx++)
                 {
@@ -235,14 +254,10 @@ Mat computeCosine(Mat * mat_l, Mat * mat_r, int max_disp, int num_threads)
     int dims[3] = {H, W, max_disp};
     Mat predict = Mat(3, dims, CV_32F);
 
-    float * mat_l_ptr = mat_l->ptr<float>();
-    float * mat_r_ptr = mat_r->ptr<float>();
-    float * predict_ptr = predict.ptr<float>();
-
     CosineData cosine_data;
-    cosine_data.predict_ptr = predict_ptr;
-    cosine_data.mat_l_ptr   = mat_l_ptr;
-    cosine_data.mat_r_ptr   = mat_r_ptr;
+    cosine_data.predict_ptr = predict.ptr<float>();
+    cosine_data.mat_l_ptr   = mat_l->ptr<float>();
+    cosine_data.mat_r_ptr   = mat_r->ptr<float>();
     cosine_data.W           = W;
     cosine_data.H           = H;
     cosine_data.max_disp    = max_disp;
@@ -319,11 +334,11 @@ void computeSGBMNDisp(SGBMData * sgbm_data, int start_row, int end_row)
 	                if (v_ptr >= n) v_ptr = n - 1;
 	                if (ld_ptr_y < 0) ld_ptr_y = 0;
 	                if (ld_ptr_y >= m - max_disp) ld_ptr_y = m - max_disp - 1;
-
-	                cost_h  += toMatchingCost(getElement(predict_ptr, i, h_ptr, d, m - max_disp, max_disp));
-	                cost_v  += toMatchingCost(getElement(predict_ptr, v_ptr, j - max_disp, d, m - max_disp, max_disp));
-	                cost_rd += toMatchingCost(getElement(predict_ptr, v_ptr, h_ptr, d, m - max_disp, max_disp));
-	                cost_ld += toMatchingCost(getElement(predict_ptr, v_ptr, ld_ptr_y, d, m - max_disp, max_disp));
+	                
+	                cost_h  += getElement(predict_ptr, i, h_ptr, d, m - max_disp, max_disp);
+	                cost_v  += getElement(predict_ptr, v_ptr, j - max_disp, d, m - max_disp, max_disp);
+	                cost_rd += getElement(predict_ptr, v_ptr, h_ptr, d, m - max_disp, max_disp);
+	                cost_ld += getElement(predict_ptr, v_ptr, ld_ptr_y, d, m - max_disp, max_disp);
 
 	            }
 
@@ -356,6 +371,10 @@ Mat computeSGBM(Mat * predict, int cross_size, int num_threads)
     sgbm_data.m            = m;
     sgbm_data.n            = n;
 
+    for(int i = 0; i < n*p_column*max_disp; i++)
+    {
+        sgbm_data.predict_ptr[i] = toMatchingCost(sgbm_data.predict_ptr[i]);
+    }
  
     //computeSGBMNDisp(&sgbm_data, 0, n);
     
@@ -386,8 +405,8 @@ int main() {
     tensorflow::Session* model_l;
     tensorflow::Session* model_r;
 
-    loadModel("../../models/model_l.pb", &model_l);
-    loadModel("../../models/model_r.pb", &model_r);
+    loadModel("../../models/model_9x9x70_l.pb", &model_l);
+    loadModel("../../models/model_9x9x70_r.pb", &model_r);
 
     const int H = img_l.rows;
     const int W = img_l.cols;

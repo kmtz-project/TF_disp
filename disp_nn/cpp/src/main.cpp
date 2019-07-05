@@ -405,8 +405,8 @@ int main() {
     tensorflow::Session* model_l;
     tensorflow::Session* model_r;
 
-    loadModel("../../models/model_9x9x70_l.pb", &model_l);
-    loadModel("../../models/model_9x9x70_r.pb", &model_r);
+    loadModel("../../models/model_3x3x10_l.pb", &model_l);
+    loadModel("../../models/model_3x3x10_r.pb", &model_r);
 
     const int H = img_l.rows;
     const int W = img_l.cols;
@@ -440,8 +440,10 @@ int main() {
 
     // run models
     start_time = getTimeUS();
-    model_l->Run(inputs_l, {"lc4/Relu"}, {}, &otensor_l);
-    model_r->Run(inputs_r, {"rc4/Relu"}, {}, &otensor_r);
+    
+    // ATTENTION! Change to lcN, rcN, where N - is a number of layers
+    model_l->Run(inputs_l, {"lc1/Relu"}, {}, &otensor_l);
+    model_r->Run(inputs_r, {"rc1/Relu"}, {}, &otensor_r);
     exec_time = calcTimeDiffMS(start_time);
 
     float conv_time = exec_time/1000;
@@ -468,7 +470,7 @@ int main() {
     }*/
 
     int max_disp    = 70;
-    int num_threads = 6;
+    int num_threads = 9;
 
     start_time  = getTimeUS();
     Mat predict = computeCosine(&mout_l, &mout_r, max_disp, num_threads);

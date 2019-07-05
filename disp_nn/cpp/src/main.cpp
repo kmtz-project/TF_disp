@@ -401,18 +401,11 @@ int main() {
 
     loadImage("../../../../samples/Middlebury_scenes_2014/trainingQ/Motorcycle/im0.png", &img_l);
     loadImage("../../../../samples/Middlebury_scenes_2014/trainingQ/Motorcycle/im1.png", &img_r);
-  
-    tensorflow::Session* model_l;
-    tensorflow::Session* model_r;
-
-    loadModel("../../models/model_3x3x10_l.pb", &model_l);
-    loadModel("../../models/model_3x3x10_r.pb", &model_r);
-
+    
+    // Data normalization
     const int H = img_l.rows;
     const int W = img_l.cols;
-    Tensor itensor_l (DT_FLOAT, TensorShape({1, H, W, 1}));
-    Tensor itensor_r (DT_FLOAT, TensorShape({1, H, W, 1}));
-
+    
     float img_l_mean = computeMatMean(&img_l);
     float img_l_std  = computeMatStd(&img_l);
     float img_r_mean = computeMatMean(&img_r);
@@ -426,6 +419,18 @@ int main() {
 
     img_l_norm = (img_l_norm - img_l_mean)/img_l_std;
     img_r_norm = (img_r_norm - img_r_mean)/img_r_std;
+    
+    // Conv result
+    Mat mout_l, mout_r;
+    
+    tensorflow::Session* model_l;
+    tensorflow::Session* model_r;
+
+    loadModel("../../models/model_3x3x10_l.pb", &model_l);
+    loadModel("../../models/model_3x3x10_r.pb", &model_r);
+
+    Tensor itensor_l (DT_FLOAT, TensorShape({1, H, W, 1}));
+    Tensor itensor_r (DT_FLOAT, TensorShape({1, H, W, 1}));
 
     copyMatToTensor(&img_l_norm, &itensor_l);
     copyMatToTensor(&img_r_norm, &itensor_r);
@@ -444,20 +449,20 @@ int main() {
     // ATTENTION! Change to lcN, rcN, where N - is a number of layers
     model_l->Run(inputs_l, {"lc1/Relu"}, {}, &otensor_l);
     model_r->Run(inputs_r, {"rc1/Relu"}, {}, &otensor_r);
+    
+    //доступ к тензорам-результатам
+    Tensor out_l = otensor_l[0];
+    Tensor out_r = otensor_r[0];
+ 
+    copyTensorToMat(&out_l, &mout_l);
+    copyTensorToMat(&out_r, &mout_r);
+    
     exec_time = calcTimeDiffMS(start_time);
 
     float conv_time = exec_time/1000;
     cout << termcolor::green << 
         "Time (calc Conv layers): " << conv_time << " sec" <<
         termcolor::reset << endl;
-    
-    //доступ к тензорам-результатам
-    Tensor out_l = otensor_l[0];
-    Tensor out_r = otensor_r[0];
-    Mat mout_l, mout_r;
- 
-    copyTensorToMat(&out_l, &mout_l);
-    copyTensorToMat(&out_r, &mout_r);
     
     /*for(int i = 0; i < 112; i++)
     {

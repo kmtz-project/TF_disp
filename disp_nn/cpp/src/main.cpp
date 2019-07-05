@@ -7,7 +7,7 @@
 #include "boost/date_time/posix_time/posix_time.hpp"
 #include "termcolor.hpp"
 #include <thread>
-//#include <math>
+#include <immintrin.h>
 
 using namespace tensorflow;
 using namespace tensorflow::ops;
@@ -133,6 +133,11 @@ float getElement(float * mas, int i, int j, int k, int j_max, int k_max)
     return mas[i*j_max*k_max + j*k_max + k];
 }
 
+float * getElementPtr(float * mas, int i, int j, int k, int j_max, int k_max)
+{
+    return &mas[i*j_max*k_max + j*k_max + k];
+}
+
 struct CosineData {
     float * predict_ptr;
     float * mat_l_ptr;
@@ -151,6 +156,16 @@ void computeCosineNDisp(CosineData * cosine_data, int start_disp, int end_disp)
     int H        = cosine_data->H;
     int max_disp = cosine_data->max_disp;
     int NUM_FILT = cosine_data->NUM_FILT;
+    
+    #ifdef __AVX__
+    float * fv_l_mas;
+    float * fv_r_mas;
+    float avx_res_mas[8];
+    
+    __m256 mm_l_mas, mm_r_mas;
+    __m256 mm_reg1, mm_reg2, mm_reg3, mm_reg4;
+    
+    #endif
 
     for(int disp_idx = start_disp; disp_idx < end_disp; disp_idx++)
     {
@@ -161,6 +176,34 @@ void computeCosineNDisp(CosineData * cosine_data, int start_disp, int end_disp)
                 float a = 0;
                 float b = 0;
                 float c = 0;
+                
+                #ifdef __AVX__
+                for(int filt_idx = 0; filt_idx < NUM_FILT; filt_idx += 8)
+                {
+                    fv_l_mas = getElementPtr(cosine_data->mat_l_ptr, h, w, filt_idx, W + max_disp, NUM_FILT);
+                    fv_r_mas = getElementPtr(cosine_data->mat_r_ptr, h, w - max_disp + disp_idx, filt_idx, W + max_disp, NUM_FILT);
+                    
+                    mm_l_mas = _mm256_load_ps(fv_l_mas);
+                    mm_r_mas = _mm256_load_ps(fv_r_mas);
+                    
+                    mm_reg1 = _mm256_mul_ps(mm_l_mas, mm_r_mas);
+                    mm_reg2 = _mm256_mul_ps(mm_l_mas, mm_l_mas);
+                    mm_reg3 = _mm256_mul_ps(mm_r_mas, mm_r_mas);
+                    
+                    mm_reg1 = _mm256_hadd_ps(mm_reg1, mm_reg2);
+                    mm_reg1 = _mm256_hadd_ps(mm_reg1, mm_reg3);
+                    
+                    mm_reg2 = _mm256_permute2f128_ps(mm_reg1,  mm_reg1, 0x01);
+                    mm_reg3 = _mm256_add_ps(mm_reg1, mm_reg2);
+                    
+                    _mm256_store_ps(avx_res_mas, mm_reg3);
+                    
+                    a += avx_res_mas[0];
+                    b += avx_res_mas[1];                  
+                    c += avx_res_mas[2] + avx_res_mas[3];
+                    
+                }
+                #else
                 for(int filt_idx = 0; filt_idx < NUM_FILT; filt_idx++)
                 {
                     float fv_l = getElement(cosine_data->mat_l_ptr, h, w, filt_idx, W + max_disp, NUM_FILT);
@@ -170,6 +213,7 @@ void computeCosineNDisp(CosineData * cosine_data, int start_disp, int end_disp)
                     b += fv_l * fv_l;
                     c += fv_r * fv_r;
                 }
+                #endif
 
                 cosine_data->predict_ptr[h*W*max_disp + (w - max_disp)*max_disp + disp_idx] = a / pow(b * c, 0.5);
             }

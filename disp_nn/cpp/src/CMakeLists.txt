@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.6)
 project(tftest)
 
 set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_FLAGS " -mavx")
 
 find_package(OpenCV REQUIRED)
 
